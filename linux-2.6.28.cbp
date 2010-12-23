@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="linux-2.6.28" />
+		<Option pch_mode="2" />
+		<Option compiler="gcc" />
+		<Build>
+			<Target title="Release">
+				<Option output="output/images/linux-2" prefix_auto="1" extension_auto="1" />
+				<Option object_output="output/images/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O2" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+				</Linker>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-Wall" />
+		</Compiler>
+		<Unit filename="build/Makefile" />
+		<Unit filename="config/config.mk" />
+		<Unit filename="config/kernel-config-silvermoon_a0" />
+		<Unit filename="src/arch/arm/mach-mmp/Kconfig" />
+		<Unit filename="src/arch/arm/mach-mmp/Makefile" />
+		<Unit filename="src/arch/arm/mach-mmp/clock.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/arch/arm/mach-mmp/clock.h" />
+		<Unit filename="src/arch/arm/mach-mmp/common.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/arch/arm/mach-mmp/common.h" />
+		<Unit filename="src/arch/arm/mach-mmp/devices.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/arch/arm/mach-mmp/dvfm.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/addr-map.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/camera.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/clkdev.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/cputype.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/debug-macro.S" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/devices.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/dma.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/dvfm.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/entry-macro.S" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/gpio.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/gpio_ir.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/hardware.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/io.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/ir_key_def.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/irqs.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/max8660.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/memory.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/mfp-pxa168.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/mfp-pxa910.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/mfp-teton_bga.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/mfp.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/micco.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/mmc.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/mspm_prof.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/nand_supported.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/portofino.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/pxa168.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/pxa168_dvfm.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/pxa168_eth.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/pxa168_pcie.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/pxa168_pm.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/pxa168fb.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/pxa3xx_bbm.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/pxa3xx_nand.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/pxa910-squ.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/pxa910.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/pxa910_dvfm.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/pxa910_ire.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/pxa910_pm.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/pxa930_acipc.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/regs-apbc.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/regs-apmu.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/regs-ciu.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/regs-icu.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/regs-mpmu.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/regs-pcie.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/regs-rtc.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/regs-smc.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/regs-ssp.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/regs-timers.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/sanremo.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/ssp.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/system.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/timer_services.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/timex.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/uncompress.h" />
+		<Unit filename="src/arch/arm/mach-mmp/include/mach/vmalloc.h" />
+		<Unit filename="src/arch/arm/mach-mmp/io.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/arch/arm/mach-mmp/irq.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/arch/arm/mach-mmp/pxa168.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/arch/arm/mach-mmp/pxa168_dfc_ll.S" />
+		<Unit filename="src/arch/arm/mach-mmp/pxa168_dvfm.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/arch/arm/mach-mmp/pxa168_mspm_idle.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/arch/arm/mach-mmp/pxa168_mspm_prof.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/arch/arm/mach-mmp/pxa168_pcie.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/arch/arm/mach-mmp/pxa168_pm.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/arch/arm/mach-mmp/pxa168_pm_ll.S" />
+		<Unit filename="src/arch/arm/mach-mmp/silvermoon.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/arch/arm/mach-mmp/time.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/arch/arm/mach-mmp/timer_services.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/arch/arm/mach-pxa/Kconfig" />
+		<Unit filename="src/arch/arm/mach-pxa/Makefile" />
+		<Unit filename="src/arch/arm/mach-pxa/devices.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/arch/arm/plat-pxa/Kconfig" />
+		<Unit filename="src/arch/arm/plat-pxa/Makefile" />
+		<Unit filename="src/arch/arm/plat-pxa/dma.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/arch/arm/plat-pxa/generic.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/arch/arm/plat-pxa/gpio.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/arch/arm/plat-pxa/imm/Kconfig" />
+		<Unit filename="src/arch/arm/plat-pxa/imm/Makefile" />
+		<Unit filename="src/arch/arm/plat-pxa/imm/imm.h" />
+		<Unit filename="src/arch/arm/plat-pxa/imm/ioremap.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/arch/arm/plat-pxa/imm/policy.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/arch/arm/plat-pxa/imm/sram.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/arch/arm/plat-pxa/imm/sram.h" />
+		<Unit filename="src/arch/arm/plat-pxa/include/plat/dma.h" />
+		<Unit filename="src/arch/arm/plat-pxa/include/plat/generic.h" />
+		<Unit filename="src/arch/arm/plat-pxa/include/plat/gpio.h" />
+		<Unit filename="src/arch/arm/plat-pxa/include/plat/i2c.h" />
+		<Unit filename="src/arch/arm/plat-pxa/include/plat/imm.h" />
+		<Unit filename="src/arch/arm/plat-pxa/include/plat/mfp.h" />
+		<Unit filename="src/arch/arm/plat-pxa/include/plat/part_table.h" />
+		<Unit filename="src/arch/arm/plat-pxa/include/plat/pxa27x_keypad.h" />
+		<Unit filename="src/arch/arm/plat-pxa/include/plat/pxa2xx_spi.h" />
+		<Unit filename="src/arch/arm/plat-pxa/include/plat/pxa3xx_otg.h" />
+		<Unit filename="src/arch/arm/plat-pxa/include/plat/pxa3xx_pmic.h" />
+		<Unit filename="src/arch/arm/plat-pxa/include/plat/pxa_u2o.h" />
+		<Unit filename="src/arch/arm/plat-pxa/include/plat/pxausb_common.h" />
+		<Unit filename="src/arch/arm/plat-pxa/include/plat/pxausb_comp.h" />
+		<Unit filename="src/arch/arm/plat-pxa/include/plat/regs-ssp.h" />
+		<Unit filename="src/arch/arm/plat-pxa/include/plat/ssp.h" />
+		<Unit filename="src/arch/arm/plat-pxa/mfp.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/arch/arm/plat-pxa/pwm.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/arch/arm/plat-pxa/pxa3xx_pmic.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/arch/arm/plat-pxa/spi_flashinit.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/arch/arm/plat-pxa/ssp.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/drivers/char/Kconfig" />
+		<Unit filename="src/drivers/char/Makefile" />
+		<Unit filename="src/drivers/char/chumby_regs.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/drivers/char/chumby_regs.h" />
+		<Unit filename="src/drivers/char/chumby_sense1.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/drivers/char/chumby_sense1.h" />
+		<Unit filename="src/drivers/char/chumby_timer.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/drivers/char/chumby_timer.h" />
+		<Unit filename="src/drivers/input/touchscreen/Kconfig" />
+		<Unit filename="src/drivers/input/touchscreen/Makefile" />
+		<Unit filename="src/drivers/input/touchscreen/silvermoon-ts.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/drivers/input/touchscreen/silvermoon-tsb.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/drivers/serial/Kconfig" />
+		<Unit filename="src/drivers/serial/Makefile" />
+		<Unit filename="src/drivers/serial/pxa.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Extensions>
+			<code_completion />
+			<debugger />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>

@@ -1,0 +1,122 @@
+if ARCH_MMP
+
+menu "Marvell PXA168 Implmentations"
+
+config MACH_ASPENITE
+	bool "Marvell's PXA168 Aspenite Development Board"
+	select CPU_PXA168
+	help
+	  Say 'Y' here if you want to support the Marvell PXA168-based
+	  Aspenite Development Board.
+
+config MACH_CHUMBY_SILVERMOON
+	bool "Chumby Silvermoon"
+	select BOARD_CHUMBY_SILVERMOON
+	depends on CPU_PXA168
+
+config GENERIC_TIME
+	bool "Generic time (pxa168)"
+	default y
+	help
+	  Say 'N' here for Chumby Silvermoon. Recent BSP drops have
+	  CONFIG_GENERIC_TIME turned on for the entire MMP (pxa168)
+	  family. We need it off.
+
+config CHUMBY_800_480_VIDEO
+       bool "Use 800 by 480 screen instead of 800 by 600 screen"
+	depends on MACH_CHUMBY_SILVERMOON
+       default n
+
+config CHUMBY_SILVERMOON_SDBOOT
+	bool "Chumby Silvermoon board with microSD boot option"
+	select CHUMBY_SILVERMOON_MMC2_WIFI
+	depends on MACH_CHUMBY_SILVERMOON
+	default n
+	help
+	  Say 'Y' here if this is one of the newer Chumby Silvermoon
+	  boards spun in July 2009 which have the CPU on a riser
+	  card and a microSD slot for embedded SD boot
+
+config CHUMBY_SILVERMOON_A0
+	bool "Chumby Silvermoon board with early A0 stepping"
+	depends on MACH_CHUMBY_SILVERMOON
+	default n
+	help
+	  Say 'Y' here if this is an actual A0 stepping of the
+	  PXA168.
+
+config CHUMBY_SILVERMOON_MMC2_WIFI
+	bool "Chumby Silvermoon board with wifi on MMC2"
+	depends on MACH_CHUMBY_SILVERMOON
+	default n
+	help
+	  Say 'Y' here only if you have not selected the eSD option
+	  (CHUMBY_SILVERMOON_SDBOOT) but want to enable wifi on MMC2
+	  (similar to the Aspenite board) rather than on MMC3 as it
+	  was with older (pre-July 2009) hardware revs of the Chumby
+	  Silvermoon board.
+
+config MACH_WAYLAND
+	bool "Marvell's PXA168 Wayland Development Board"
+	select CPU_PXA168
+ 	help
+	  Say 'Y' here if you want to support the Marvell PXA168-based
+	  Wayland Development Board.
+
+config MACH_ZYLONITE2
+	bool "Marvell's PXA168 Zylonite2 Development Board"
+	select CPU_PXA168
+	help
+	  Say 'Y' here if you want to support the Marvell PXA168-based
+	  Zylonite2 Development Board.
+
+config MACH_TETON_BGA
+        bool "Marvell's PXA168 Teton BGA Development Board"
+        select CPU_PXA168
+        help
+          Say 'Y' here if you want to support the Marvell PXA168-based
+          Teton BGA Development Board.
+
+config MACH_TTC_DKB
+	bool "Marvell's PXA910 TTC_DKB Development Board"
+	select CPU_PXA910
+	select CPU_PXA168
+	help
+	  Say 'Y' here if you want to support the Marvell PXA910-based
+	  TTC_DKB Development Board.
+
+config MACH_TAVOREVB
+	bool "PXA910 Evaluation Board (aka TavorEVB)"
+	select CPU_PXA910
+	select CPU_PXA168
+	help
+	  Say 'Y' here if you want to support the Marvell PXA910-based
+	  TavorEVB Development Board.
+
+endmenu
+
+config GLOBAL_PREEMPT_NOTIFIERS
+	bool "Enable global preempt notifier"
+	depends on PREEMPT_NOTIFIERS
+	default y
+
+config CPU_PXA168
+	bool
+	select CPU_MOHAWK
+	select PREEMPT_NOTIFIERS
+	help
+	  Select code specific to PXA168
+
+config CPU_PXA910
+	bool
+	select CPU_MOHAWK
+	select PREEMPT_NOTIFIERS
+	help
+	  Select code specific to PXA910
+
+config TIMER_SERVICES_MMP
+	bool "timer services on MMP"
+	help
+	  Provide high resolution timer services
+
+endif
