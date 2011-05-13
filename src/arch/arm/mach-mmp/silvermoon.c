@@ -437,6 +437,31 @@ static void silvermoon_lcd_power(struct pxa168fb_info *fbi, unsigned int spi_gpi
 #define     CFG_SPI_SEL(spi)                    (spi<<2)   /* 1: port1; 0: port0 */
 #define     CFG_SPI_3W4WB(wire)                 (wire<<1)  /* 1: 3-wire; 0: 4-wire */
 
+
+#if defined(CONFIG_CIR)
+
+static struct resource pxa168_resource_cir[] = {
+	[0] = {
+		.start  = 0xD4019100,
+		.end    = 0xD4019100,
+		.flags  = IORESOURCE_MEM,
+	},
+
+	[1] = {
+		.start  = IRQ_GPIO(102),
+		.end    = IRQ_GPIO(102),
+		.flags  = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device pxa168_device_cir = {
+	.name           = "aspenite-cir",
+	.resource       = pxa168_resource_cir,
+	.num_resources  = ARRAY_SIZE(pxa168_resource_cir),
+};
+#endif
+
+
 // Stole this from tavor, which is also 800x600 RGB565
 // Is this 312 million picoseconds (ps) = 0.312ms = 0.312s ?
 // Apparently hz, eg 312mhz
@@ -577,19 +602,43 @@ static struct pxasdh_platform_data aspenite_sdh_platform_data_MMC1 = {
 	.detect_delay	= 20,
 	.ocr_mask	= MMC_VDD_29_30 | MMC_VDD_30_31,
 	.mfp_config	= sdh_mfp_config,
-	.bus_width = 4,
+	.bus_width 	= 4,
+	.card_detect_ok = 1,
+	.sent_init_clks = 0,
+	.cmdpad_raw_pin = MFP_PIN_GPIO49,
+	.cmdpad_as_cmd  = GPIO49_MMC1_CMD,
+	.cmdpad_as_gpio = GPIO49_GPIO,
+	.clkpad_raw_pin = MFP_PIN_GPIO43,
+	.clkpad_as_clk  = GPIO43_MMC1_CLK,
+	.clkpad_as_gpio = GPIO43_GPIO,
 };
 
 static struct pxasdh_platform_data aspenite_sdh_platform_data_MMC2 = {
 	.detect_delay	= 20,
 	.ocr_mask	= MMC_VDD_29_30 | MMC_VDD_30_31,
-	.bus_width = 4,
+	.bus_width 	= 4,
+	.sent_init_clks = 0,
+	.card_detect_ok = 0,
+	.cmdpad_raw_pin = MFP_PIN_GPIO94,
+	.cmdpad_as_cmd  = GPIO94_MMC2_CMD,
+	.cmdpad_as_gpio = GPIO94_GPIO,
+	.clkpad_raw_pin = MFP_PIN_GPIO95,
+	.clkpad_as_clk  = GPIO95_MMC2_CLK,
+	.clkpad_as_gpio = GPIO95_GPIO,
 };
 
 static struct pxasdh_platform_data aspenite_sdh_platform_data_MMC3 = {
 	.detect_delay	= 20,
 	.ocr_mask	= MMC_VDD_29_30 | MMC_VDD_30_31,
-	.bus_width = 4,
+	.bus_width 	= 4,
+	.sent_init_clks = 0,
+	.card_detect_ok = 0,
+	.cmdpad_raw_pin = MFP_PIN_GPIO9,
+	.cmdpad_as_cmd  = GPIO9_MMC3_CMD,
+	.cmdpad_as_gpio = GPIO9_GPIO,
+	.clkpad_raw_pin = MFP_PIN_GPIO8,
+	.clkpad_as_clk  = GPIO8_MMC3_CLK,
+	.clkpad_as_gpio = GPIO8_GPIO,
 };
 
 #endif
@@ -794,6 +843,10 @@ static void __init silvermoon_init(void)
 
 #if defined(CONFIG_PXA168_CAMERA) || defined(CONFIG_PXA168_CAMERA_MODULE)
 	pxa168_add_cam();
+#endif
+
+#if defined(CONFIG_CIR)
+        pxa168_cir_init(); /*init the gpio */
 #endif
 
 	platform_device_register(&silvermoon_bl_device);

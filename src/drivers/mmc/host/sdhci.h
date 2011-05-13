@@ -320,6 +320,7 @@ struct sdhci_ops {
 	int 		(*platform_supports_8_bit)(struct sdhci_host *host);
 	void 		(*platform_set_8_bit)(struct sdhci_host *host);
 	void 		(*platform_clear_8_bit)(struct sdhci_host *host);
+	int             (*platform_specific_card_detect)(struct sdhci_host *host);
 };
 
 
