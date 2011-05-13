@@ -21,7 +21,9 @@
 #include <linux/mmc/card.h>
 #include <linux/dma-mapping.h>
 
+#include <mach/gpio.h>
 #include <mach/mmc.h>
+#include <mach/mfp.h>
 
 #include "sdhci.h"
 
@@ -34,7 +36,6 @@
 #define SD_CLOCK_AND_BURST_SIZE_SETUP	0xE6
 #define SDCLK_DELAY_SHIFT	10
 #define SDCLK_SEL_SHIFT		8
-#define SDCLK_SEL_MASK		0x3
 
 #define DRIVER_NAME	"pxa-sdh"
 #define MAX_SLOTS	8
@@ -50,6 +51,14 @@ struct sdhci_mmc_slot {
 	u8	eightBitEnabled;
 	u8	clockEnabled;
 	u8	no_dynamic_SD_clocking;
+	u32     card_detect_ok;
+	u32	cmdpad_raw_pin;
+	u32	cmdpad_as_cmd;
+	u32	cmdpad_as_gpio;
+	u32	clkpad_raw_pin;
+	u32	clkpad_as_clk;
+	u32	clkpad_as_gpio;
+	u32	sent_init_clks;
 };
 
 struct sdhci_mmc_chip {
@@ -74,6 +83,89 @@ struct sdhci_mmc_fixes {
 #define DBG(f, x...) \
 	pr_debug(DRIVER_NAME " [%s()]: " f, __func__,## x)
 
+
+
+/* support functions to ensure the initial 74 clock requirement is met.      */
+/* the method of generating the initial 74 clocks is host dependent.         */
+/* for pxa168, the pad for mmc_cmd will be set to gpio mode and forced high. */
+/* then two CMD0's will be sent. that generates 48 clocks each. but since    */
+/* the mmc_cmd line is held high, the card only sees 96 clocks.              */
+
+/*static*/ void free_gpio_as_sd_cmdclk(struct sdhci_mmc_slot *slot)
+{
+	gpio_free(slot->cmdpad_raw_pin);
+	gpio_free(slot->clkpad_raw_pin);
+}
+
+/*static*/ void use_gpio_for_sd_cmdclk(struct sdhci_mmc_slot *slot)
+{
+	if (gpio_request(slot->cmdpad_raw_pin, "SDIO CMD GPIO")) {
+		printk(KERN_ERR "Request GPIO failed,"
+				"gpio: %x \n", slot->cmdpad_raw_pin);
+		BUG();
+	}
+	gpio_direction_output(slot->cmdpad_raw_pin, 1);
+
+	if (gpio_request(slot->clkpad_raw_pin, "SDIO CLK GPIO")) {
+		printk(KERN_ERR "Request GPIO failed,"
+				"gpio: %x \n", slot->clkpad_raw_pin);
+		BUG();
+	}
+	gpio_direction_output(slot->clkpad_raw_pin, 1);
+}
+
+void switch_mfp_sdio_cmdclk(struct sdhci_host *host, int enable_gpio)
+{
+	static mfp_cfg_t config[2];
+	struct sdhci_mmc_slot *slot = sdhci_priv(host);
+
+	DBG("%s<%d>\n",__func__,enable_gpio);
+
+	if (enable_gpio) {
+		use_gpio_for_sd_cmdclk(slot);
+		config[0] = slot->cmdpad_as_gpio;
+		config[1] = slot->clkpad_as_gpio;
+	}
+	else {
+		free_gpio_as_sd_cmdclk(slot);
+		config[0] = slot->cmdpad_as_cmd;
+		config[1] = slot->clkpad_as_clk;
+	}
+
+	mfp_config(config, 2);
+}
+
+/* bpc: MMC spec calls for the host to send 74 clocks to the card             */
+/*      during initialization, right after voltage stabilization.             */
+/*      the pxa168 controller has no easy way to generate those clocks.       */
+/*      create the clocks manually right here.                                */
+/*                                                                            */
+void generate_init_clks(struct sdhci_host *host)
+{
+	struct sdhci_mmc_slot *slot = sdhci_priv(host);
+	int i;
+
+	switch_mfp_sdio_cmdclk(host, 1);	/* CMD/CLK pin to gpio mode.  */
+	udelay(3);			/* ensure at least 1/2 period stable  */
+                                        /* before loop to prevent runt pulse. */
+	for(i=0;i<80;i++) {		/* spec says 74 clks-a few more is OK */
+		gpio_direction_output(slot->clkpad_raw_pin, 0);	       /* low */
+		udelay(3);
+		gpio_direction_output(slot->clkpad_raw_pin, 1);	      /* high */
+		udelay(3);
+	}
+	switch_mfp_sdio_cmdclk(host, 0);	/* CMD/CLK pin to MMC mode.   */
+	slot->sent_init_clks = 1;
+
+
+}
+/* end of initial clock generation support functions */
+
+
+
+
+
+
 static void inline programFIFO (struct sdhci_host *host)
 {
 	struct sdhci_mmc_slot *slot = sdhci_priv(host);
@@ -96,6 +188,16 @@ static int platform_supports_8_bit(struct sdhci_host *host)
 	struct sdhci_mmc_slot *slot = sdhci_priv(host);
 	
 	return slot->width >= 8;
+}
+
+static int platform_specific_card_detect(struct sdhci_host *host)
+{
+	struct sdhci_mmc_slot *slot = sdhci_priv(host);
+
+	DBG("EXIT: %s card_detect_ok = %04X\n", mmc_hostname(host->mmc),
+		slot->card_detect_ok);
+
+	return slot->card_detect_ok;
 }
 
 #define SD_CE_ATA_2		0xEA
@@ -129,7 +231,6 @@ static void platform_set_8_bit(struct sdhci_host *host)
 static int platform_init_after_reset (struct sdhci_host *host)
 {	
 	struct sdhci_mmc_slot *slot = sdhci_priv(host);
-	int tmp;
 
 	programFIFO(host);
 	
@@ -139,24 +240,6 @@ static int platform_init_after_reset (struct sdhci_host *host)
 		else
 			platform_clear_8_bit(host);
 	}
-	
-	
-#if defined(CONFIG_MACH_CHUMBY_SILVERMOON)
-	tmp = readw(host->ioaddr + SD_CLOCK_AND_BURST_SIZE_SETUP) &
-		~(SDCLK_SEL_MASK << SDCLK_SEL_SHIFT);
-	writew(tmp, host->ioaddr + SD_CLOCK_AND_BURST_SIZE_SETUP);
-#define SD_HOST_CTRL		0x0028		/* Host Control */
-	// manipulate the SD_HOST_CTRL reg for MMC3 (see sec A.28.21 in software manual)
-	// The silvermoon unit should *always* have an SD card in for the rootfs.  
-	// OR in the bits for a fake card detect signal always on
-	if (host->mmc->index == 2)
-	{
-		tmp = readw(host->ioaddr + SD_HOST_CTRL);
-		tmp  |= (1<<6) | (1<<7);
-		writew(tmp, host->ioaddr + SD_HOST_CTRL);
-	}
-#endif
-
 	DBG ("SD_CLOCK_AND_BURST_SIZE_SETUP to %04X\n", readw(host->ioaddr + SD_CLOCK_AND_BURST_SIZE_SETUP));
 	return 0;
 }
@@ -318,6 +401,7 @@ static struct sdhci_ops sdhci_mmc_ops = {
 	.platform_supports_8_bit = &platform_supports_8_bit,
 	.platform_set_8_bit = &platform_set_8_bit,
 	.platform_clear_8_bit = &platform_clear_8_bit,
+	.platform_specific_card_detect = &platform_specific_card_detect,
 };
 
 
@@ -425,10 +509,14 @@ static int pxa_sdh_probe(struct platform_device *pdev)
 	}
 	slot->clkrate = clk_get_rate(slot->clk);
 
-	if (chip->pdata)
+	if (chip->pdata){
 		slot->width = chip->pdata->bus_width;
-	else
+		slot->card_detect_ok = chip->pdata->card_detect_ok;
+	}
+	else{
 		slot->width = 4;
+		slot->card_detect_ok = 1;
+	}
 
 	DBG("slot->width = %d\n", slot->width);
 
@@ -442,6 +530,14 @@ static int pxa_sdh_probe(struct platform_device *pdev)
 	
 	if(chip->pdata->mfp_config)	
 		chip->pdata->mfp_config();
+
+	slot->cmdpad_raw_pin = chip->pdata->cmdpad_raw_pin;
+	slot->cmdpad_as_cmd  = chip->pdata->cmdpad_as_cmd;
+	slot->cmdpad_as_gpio = chip->pdata->cmdpad_as_gpio;
+	slot->clkpad_raw_pin = chip->pdata->clkpad_raw_pin;
+	slot->clkpad_as_clk  = chip->pdata->clkpad_as_clk;
+	slot->clkpad_as_gpio = chip->pdata->clkpad_as_gpio;
+	slot->sent_init_clks = 0;
 
 	DBG ("Exit %s\n", mmc_hostname(host->mmc));
 	return 0;

@@ -50,6 +50,8 @@ static void sdhci_finish_data(struct sdhci_host *);
 
 static void sdhci_send_command(struct sdhci_host *, struct mmc_command *);
 static void sdhci_finish_command(struct sdhci_host *);
+extern void generate_init_clks(struct sdhci_host*);
+
 
 static void sdhci_dumpregs(struct sdhci_host *host)
 {
@@ -883,6 +885,11 @@ static void sdhci_send_command(struct sdhci_host *host, struct mmc_command *cmd)
 
 	WARN_ON(host->cmd);
 
+	/* is this a CMD0 (GO_IDLE)? if so, then this is the very first command.
+	 * therefore we need to generate clocks sending the first it.
+	 */
+	if (cmd->opcode == MMC_GO_IDLE_STATE) generate_init_clks(host);
+
 	/* Wait max 10 ms */
 	timeout = 10;
 
@@ -1135,8 +1142,8 @@ static void sdhci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 #ifdef WARNINGS
 #warning FORCE PRESENT FOR 8 BIT
 #endif
-	if (host->ops->platform_supports_8_bit) {
-		if (host->ops->platform_supports_8_bit(host)) {
+        if (host->ops->platform_specific_card_detect) {
+		if (host->ops->platform_specific_card_detect(host) == 0) {
 			present = 1;
 			host->flags &= ~SDHCI_DEVICE_DEAD;
 		}
@@ -1664,7 +1671,6 @@ out:
 int sdhci_suspend_host(struct sdhci_host *host, pm_message_t state)
 {
 	int ret;
-	printk ("%s: ENTER\n", __FUNCTION__);
 	sdhci_disable_card_detection(host);
 
 	ret = mmc_suspend_host(host->mmc, state);
@@ -1682,7 +1688,6 @@ int sdhci_resume_host(struct sdhci_host *host)
 {
 	int ret;
 
-	printk ("%s: ENTER\n", __FUNCTION__);
 	if (host->flags & SDHCI_USE_DMA) {
 		if (host->ops->enable_dma)
 			host->ops->enable_dma(host);

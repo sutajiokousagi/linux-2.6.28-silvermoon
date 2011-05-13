@@ -577,19 +577,43 @@ static struct pxasdh_platform_data aspenite_sdh_platform_data_MMC1 = {
 	.detect_delay	= 20,
 	.ocr_mask	= MMC_VDD_29_30 | MMC_VDD_30_31,
 	.mfp_config	= sdh_mfp_config,
-	.bus_width = 4,
+	.bus_width 	= 4,
+	.card_detect_ok = 1,
+	.sent_init_clks = 0,
+	.cmdpad_raw_pin = MFP_PIN_GPIO49,
+	.cmdpad_as_cmd  = GPIO49_MMC1_CMD,
+	.cmdpad_as_gpio = GPIO49_GPIO,
+	.clkpad_raw_pin = MFP_PIN_GPIO43,
+	.clkpad_as_clk  = GPIO43_MMC1_CLK,
+	.clkpad_as_gpio = GPIO43_GPIO,
 };
 
 static struct pxasdh_platform_data aspenite_sdh_platform_data_MMC2 = {
 	.detect_delay	= 20,
 	.ocr_mask	= MMC_VDD_29_30 | MMC_VDD_30_31,
-	.bus_width = 4,
+	.bus_width 	= 4,
+	.sent_init_clks = 0,
+	.card_detect_ok = 0,
+	.cmdpad_raw_pin = MFP_PIN_GPIO94,
+	.cmdpad_as_cmd  = GPIO94_MMC2_CMD,
+	.cmdpad_as_gpio = GPIO94_GPIO,
+	.clkpad_raw_pin = MFP_PIN_GPIO95,
+	.clkpad_as_clk  = GPIO95_MMC2_CLK,
+	.clkpad_as_gpio = GPIO95_GPIO,
 };
 
 static struct pxasdh_platform_data aspenite_sdh_platform_data_MMC3 = {
 	.detect_delay	= 20,
 	.ocr_mask	= MMC_VDD_29_30 | MMC_VDD_30_31,
-	.bus_width = 4,
+	.bus_width 	= 4,
+	.sent_init_clks = 0,
+	.card_detect_ok = 0,
+	.cmdpad_raw_pin = MFP_PIN_GPIO9,
+	.cmdpad_as_cmd  = GPIO9_MMC3_CMD,
+	.cmdpad_as_gpio = GPIO9_GPIO,
+	.clkpad_raw_pin = MFP_PIN_GPIO8,
+	.clkpad_as_clk  = GPIO8_MMC3_CLK,
+	.clkpad_as_gpio = GPIO8_GPIO,
 };
 
 #endif

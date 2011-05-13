@@ -922,7 +922,7 @@ void mmc_rescan(struct work_struct *work)
 		/*
 		 * ...and finally MMC.
 		 */
-		err = mmc_send_op_cond(host, 0xFF800000, &ocr);
+		err = mmc_send_op_cond(host, 0, &ocr);
 		if (!err) {
 			if (mmc_attach_mmc(host, ocr))
 				mmc_power_off(host);
