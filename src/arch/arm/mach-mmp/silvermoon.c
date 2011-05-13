@@ -437,31 +437,6 @@ static void silvermoon_lcd_power(struct pxa168fb_info *fbi, unsigned int spi_gpi
 #define     CFG_SPI_SEL(spi)                    (spi<<2)   /* 1: port1; 0: port0 */
 #define     CFG_SPI_3W4WB(wire)                 (wire<<1)  /* 1: 3-wire; 0: 4-wire */
 
-
-#if defined(CONFIG_CIR)
-
-static struct resource pxa168_resource_cir[] = {
-	[0] = {
-		.start  = 0xD4019100,
-		.end    = 0xD4019100,
-		.flags  = IORESOURCE_MEM,
-	},
-
-	[1] = {
-		.start  = IRQ_GPIO(102),
-		.end    = IRQ_GPIO(102),
-		.flags  = IORESOURCE_IRQ,
-	},
-};
-
-struct platform_device pxa168_device_cir = {
-	.name           = "aspenite-cir",
-	.resource       = pxa168_resource_cir,
-	.num_resources  = ARRAY_SIZE(pxa168_resource_cir),
-};
-#endif
-
-
 // Stole this from tavor, which is also 800x600 RGB565
 // Is this 312 million picoseconds (ps) = 0.312ms = 0.312s ?
 // Apparently hz, eg 312mhz
@@ -843,10 +818,6 @@ static void __init silvermoon_init(void)
 
 #if defined(CONFIG_PXA168_CAMERA) || defined(CONFIG_PXA168_CAMERA_MODULE)
 	pxa168_add_cam();
-#endif
-
-#if defined(CONFIG_CIR)
-        pxa168_cir_init(); /*init the gpio */
 #endif
 
 	platform_device_register(&silvermoon_bl_device);
