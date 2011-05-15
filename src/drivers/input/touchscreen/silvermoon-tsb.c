@@ -1011,14 +1011,12 @@ static char banner[] __initdata =
 static int __init silvermoon_ts_init(void)
 {
 	printk(banner);
-	silvermoon_ts_probe(NULL);
 	return platform_driver_register(&silvermoon_ts_driver);
 }
 
 
 static void __exit silvermoon_ts_exit(void)
 {
-	silvermoon_ts_remove(NULL);
 	platform_driver_unregister(&silvermoon_ts_driver);
 }
 
