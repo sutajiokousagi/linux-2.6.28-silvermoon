@@ -125,6 +125,8 @@ enum { US_DO_ALL_FLAGS };
  */
 #ifdef CONFIG_USB_LIBUSUAL
 
+#include <linux/mod_devicetable.h>
+
 extern struct usb_device_id storage_usb_ids[];
 extern void usb_usual_set_present(int type);
 extern void usb_usual_clear_present(int type);

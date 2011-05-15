@@ -1001,7 +1001,9 @@ MODULE_LICENSE ("GPL");
 
 #ifdef CONFIG_USB_EHCI_PXA_U2H
 #include "ehci-pxau2h.c"
+#if defined(CONFIG_USB_EHCI_PXA_U2H) && !defined(CONFIG_USB_EHCI_PXA_U2O)
 #define PLATFORM_DRIVER		pxau2h_ehci_driver
+#endif
 #endif
 
 #ifdef CONFIG_USB_EHCI_PXA_U2O
@@ -1077,6 +1079,11 @@ static int __init ehci_hcd_init(void)
 #endif
 
 #ifdef PLATFORM_DRIVER
+#if defined(CONFIG_USB_EHCI_PXA_U2H) && defined(CONFIG_USB_EHCI_PXA_U2O)
+	retval = platform_driver_register(&pxau2h_ehci_driver);
+	if (retval < 0)
+		goto clean0;
+#endif
 	retval = platform_driver_register(&PLATFORM_DRIVER);
 	if (retval < 0)
 		goto clean0;

@@ -74,6 +74,16 @@ static int pxau2h_ehci_setup(struct usb_hcd *hcd)
 	return retval;
 }
 
+static int ignore_ehci_connect(struct usb_hcd *hcd, struct usb_device *udev)
+{
+        return 0;
+}
+
+static int ignore_ehci_disconnect(struct usb_hcd *hcd)
+{
+	return 0;
+}
+
 static const struct hc_driver pxau2h_ehci_hc_driver = {
 	.description = hcd_name,
 	.product_desc = "Marvell PXA SOC EHCI Host Controller",
@@ -118,6 +128,11 @@ static const struct hc_driver pxau2h_ehci_hc_driver = {
 	.bus_resume = ehci_bus_resume,
 	.relinquish_port = ehci_relinquish_port,
 	.port_handed_over = ehci_port_handed_over,
+
+#ifdef  CONFIG_USB_OTG
+	.disconnect = ignore_ehci_disconnect,
+	.connect = ignore_ehci_connect,
+#endif
 };
 
 static int pxau2h_ehci_probe(struct platform_device *pdev)
@@ -127,7 +142,7 @@ static int pxau2h_ehci_probe(struct platform_device *pdev)
 	struct usb_hcd *hcd;
 	int irq, retval, tmp;
 
-	dev_dbg(&pdev->dev,"Initializing PXA EHCI-SOC USB Controller(U2H)\n");
+	dev_dbg(&pdev->dev, "Initializing PXA EHCI-SOC USB Controller(U2H)\n");
 	info = dev->platform_data;
 
 	pxau2h_ehci_clk_set(1);
@@ -154,7 +169,7 @@ static int pxau2h_ehci_probe(struct platform_device *pdev)
 		goto err1;
 	}
 
-	printk("u2h regbase 0x%p phybase 0x%p irq %d\n", (void *)info->regbase,
+	dev_dbg(&pdev->dev, "u2h regbase 0x%p phybase 0x%p irq %d\n", (void *)info->regbase,
 			(void *)info->phybase, irq);
 
 	if (!info->phy_init || info->phy_init((unsigned int)info->phybase)) {

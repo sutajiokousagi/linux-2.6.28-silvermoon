@@ -330,16 +330,20 @@ struct platform_device pxa168_device_u2o = {
 };
 #endif
 
+
+#if defined(CONFIG_USB_EHCI_PXA_U2H) || (defined(CONFIG_USB_PXA_U2O) && defined(CONFIG_USB_OTG))
+static u64 ehci_hcd_pxa_dmamask = DMA_BIT_MASK(32);
+static void ehci_hcd_pxa_device_release(struct device *dev)
+{
+	/* Keep this function empty. */
+}
+#endif
+
+
 #ifdef CONFIG_USB_EHCI_PXA_U2H
 /********************************************************************
  * USB 2.0 Dedicated Host controller
  */
-static u64 ehci_hcd_pxa_dmamask = DMA_BIT_MASK(32);
-
-static void ehci_hcd_pxa_device_release(struct device *dev)
-{
-        /* Keep this function empty. */
-}
 
 static struct resource pxa168_u2h_resources[] = {
 	/* regbase */
@@ -378,11 +382,6 @@ struct platform_device pxa168_device_u2h = {
 #endif
 
 #if defined(CONFIG_USB_PXA_U2O) && defined(CONFIG_USB_OTG)
-static u64 ehci_hcd_pxa_dmamask = DMA_BIT_MASK(32);
-static void ehci_hcd_pxa_device_release(struct device *dev)
-{
-	/* Keep this function empty. */
-}
 
 struct resource pxa168_u2ootg_resources[] = {
 	/* regbase */
