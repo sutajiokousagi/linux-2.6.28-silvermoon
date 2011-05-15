@@ -40,7 +40,6 @@
 #include <asm/io.h>
 
 #include <mach/regs-rtc.h>
-#include <mach/regs-apbc.h>
 
 #define TIMER_FREQ		CLOCK_TICK_RATE
 #define RTC_DEF_DIVIDER		32768 - 1
@@ -278,9 +277,6 @@ static int mmp_rtc_probe(struct platform_device *pdev)
 		ret = -ENXIO;
 		goto err;
 	}
-
-	/* Bring RTC out of reset */
-	(*((volatile u32 *)(APBC_PXA168_RTC))) = 0x83;
 
 	ret = request_irq(irq_1hz, mmp_rtc_interrupt, IRQF_DISABLED,
 				"rtc 1Hz", dev);

@@ -109,7 +109,7 @@ MODULE_AUTHOR("Matthew Dharm <mdharm-usb@one-eyed-alien.net>");
 MODULE_DESCRIPTION("USB Mass Storage driver for Linux");
 MODULE_LICENSE("GPL");
 
-static unsigned int delay_use = 2;
+static unsigned int delay_use = 5;
 module_param(delay_use, uint, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(delay_use, "seconds to delay before using a new device");
 
@@ -934,9 +934,6 @@ static int usb_stor_scan_thread(void * __us)
 	complete_and_exit(&us->scanning_done, 0);
 }
 
-#ifdef CONFIG_CHUMBY_SILVERMOON_MEDIA
-extern int silvermoon_media_inserted(void);
-#endif
 
 /* Probe to see if we can drive a newly-connected USB device */
 static int storage_probe(struct usb_interface *intf,
@@ -949,7 +946,6 @@ static int storage_probe(struct usb_interface *intf,
 
 	if (usb_usual_check_type(id, USB_US_TYPE_STOR))
 		return -ENXIO;
-
 
 	US_DEBUGP("USB Mass Storage device detected\n");
 
@@ -975,7 +971,6 @@ static int storage_probe(struct usb_interface *intf,
 	init_completion(&(us->notify));
 	init_waitqueue_head(&us->delay_wait);
 	init_completion(&us->scanning_done);
-
 
 	/* Associate the us_data structure with the USB device */
 	result = associate_dev(us, intf);
@@ -1014,22 +1009,6 @@ static int storage_probe(struct usb_interface *intf,
 			"Unable to add the scsi host\n");
 		goto BadDevice;
 	}
-
-#ifdef CONFIG_CHUMBY_SILVERMOON_MEDIA
-    /*
-     * If this is the special media card that's attached to a Silvermoon
-     * board, and if no media is actually inserted, fail.
-     * There's got to be a better palce to put this.
-     */
-    if(0x058f==le16_to_cpu(interface_to_usbdev(intf)->descriptor.idVendor)
-    && 0x6366==le16_to_cpu(interface_to_usbdev(intf)->descriptor.idProduct)
-    ) {
-        if(!silvermoon_media_inserted()) {
-			release_everything(host_to_us(host));
-			return -ENXIO;
-        }
-    }
-#endif
 
 	/* Start up the thread for delayed SCSI-device scanning */
 	th = kthread_create(usb_stor_scan_thread, us, "usb-stor-scan");

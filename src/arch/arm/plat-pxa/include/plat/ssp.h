@@ -22,8 +22,6 @@
 
 #include <linux/list.h>
 #include <linux/io.h>
-#include <linux/interrupt.h>
-#include <linux/irq.h>
 
 enum pxa_ssp_type {
 	SSP_UNDEFINED = 0,
@@ -70,7 +68,6 @@ struct ssp_dev {
 	u32 psp_flags;
 	u32 speed;
 	int irq;
-	irq_handler_t handler;
 };
 
 int ssp_write_word(struct ssp_dev *dev, u32 data);
@@ -82,7 +79,6 @@ void ssp_save_state(struct ssp_dev *dev, struct ssp_state *ssp);
 void ssp_restore_state(struct ssp_dev *dev, struct ssp_state *ssp);
 int ssp_init(struct ssp_dev *dev, u32 port, u32 init_flags);
 int ssp_config(struct ssp_dev *dev, u32 mode, u32 flags, u32 psp_flags, u32 speed);
-int ssp_set_handler(struct ssp_dev *dev, irq_handler_t handler);
 void ssp_exit(struct ssp_dev *dev);
 
 /**

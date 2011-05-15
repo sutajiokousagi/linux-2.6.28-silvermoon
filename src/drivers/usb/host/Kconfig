@@ -103,13 +103,6 @@ config USB_EHCI_PXA_U2H
         ---help---
           Variation of USB block used in some Marvell chips.
 
-config CHUMBY_SILVERMOON_MEDIA
-	depends on USB_EHCI_PXA_U2H
-	bool "Support hacked Silvermoon media driver"
-	default y
-	---help---
-	  Enables detection for the Silvermoon media ports
-
 config USB_EHCI_PXA_U2O
 	bool "Support for PXA on-chip EHCI USB controller (U2O)"
 	depends on USB_EHCI_HCD && USB_GADGET_PXA_U2O && USB_OTG

@@ -29,7 +29,6 @@
 #define SUPPORT_SYSRQ
 #endif
 
-
 #include <linux/module.h>
 #include <linux/ioport.h>
 #include <linux/init.h>
@@ -50,9 +49,9 @@
 #include <plat/dma.h>
 #include <mach/regs-apbc.h>
 
-#define CHLOG(format, arg...)            \
-	printk("serial/pxa.c - %s():%d - " format, __func__, __LINE__, ## arg)
-
+#ifdef CONFIG_DVFM
+#include <mach/dvfm.h>
+#endif
 
 #define		UART_IER_DMA		(1 << 7)
 #define		UART_LSR_FIFOE		(1 << 7)
@@ -68,6 +67,10 @@ struct uart_pxa_port {
 	struct clk		*clk;
 	char			*name;
 	struct timer_list	pxa_timer;
+#ifdef CONFIG_DVFM
+	int			dvfm_dev_idx;
+	struct dvfm_lock	dvfm_lock;
+#endif
 	int			txdma;
 	int			rxdma;
 	void 			*txdma_addr;
@@ -98,6 +101,30 @@ static void pxa_uart_transmit_dma_start(struct uart_pxa_port *up, int count);
 static void pxa_uart_receive_dma_start(struct uart_pxa_port *up);
 static inline void wait_for_xmitr(struct uart_pxa_port *up);
 static inline void serial_out(struct uart_pxa_port *up, int offset, int value);
+
+#ifdef CONFIG_DVFM
+#define PXA_TIMER_TIMEOUT (15*HZ)
+static void set_dvfm_constraint(struct uart_pxa_port *sport)
+{
+	spin_lock_irqsave(&sport->dvfm_lock.lock, sport->dvfm_lock.flags);
+	dvfm_disable_op_name("apps_idle", sport->dvfm_dev_idx);
+	dvfm_disable_op_name("apps_sleep", sport->dvfm_dev_idx);
+	dvfm_disable_op_name("sys_sleep", sport->dvfm_dev_idx);
+	spin_unlock_irqrestore(&sport->dvfm_lock.lock, sport->dvfm_lock.flags);
+}
+
+static void unset_dvfm_constraint(struct uart_pxa_port *sport)
+{
+	spin_lock_irqsave(&sport->dvfm_lock.lock, sport->dvfm_lock.flags);
+	dvfm_enable_op_name("apps_idle", sport->dvfm_dev_idx);
+	dvfm_enable_op_name("apps_sleep", sport->dvfm_dev_idx);
+	dvfm_enable_op_name("sys_sleep", sport->dvfm_dev_idx);
+	spin_unlock_irqrestore(&sport->dvfm_lock.lock, sport->dvfm_lock.flags);
+}
+#else
+static void set_dvfm_constraint(struct uart_pxa_port *sport) {}
+static void unset_dvfm_constraint(struct uart_pxa_port *sport) {}
+#endif
 
 static inline unsigned int serial_in(struct uart_pxa_port *up, int offset)
 {
@@ -255,7 +282,6 @@ static void transmit_chars(struct uart_pxa_port *up)
 		serial_pxa_stop_tx(&up->port);
 }
 
-
 static inline void
 dma_receive_chars(struct uart_pxa_port *up, int *status)
 {
@@ -341,6 +367,11 @@ static void serial_pxa_start_tx(struct uart_port *port)
 {
 	struct uart_pxa_port *up = (struct uart_pxa_port *)port;
 
+#ifdef CONFIG_DVFM
+	if (!mod_timer(&up->pxa_timer, jiffies + PXA_TIMER_TIMEOUT))
+		set_dvfm_constraint(up);
+#endif
+
 	if (uart_dma) {
 		up->tx_stop = 0;
 		tasklet_schedule(&up->tklet);
@@ -384,6 +415,10 @@ static inline irqreturn_t serial_pxa_irq(int irq, void *dev_id)
 	iir = serial_in(up, UART_IIR);
 	if (iir & UART_IIR_NO_INT)
 		return IRQ_NONE;
+#if defined(CONFIG_DVFM)
+	if (!mod_timer(&up->pxa_timer, jiffies + PXA_TIMER_TIMEOUT))
+		set_dvfm_constraint(up);
+#endif
 	lsr = serial_in(up, UART_LSR);
 	if (uart_dma) {
 		if (UART_LSR_FIFOE & lsr)
@@ -1130,9 +1165,6 @@ static void serial_pxa_console_putchar(struct uart_port *port, int ch)
 	serial_out(up, UART_TX, ch);
 }
 
-
-
-
 /*
  * Print a string to the serial port trying not to disturb
  * any possible real use of the port...
@@ -1144,6 +1176,11 @@ serial_pxa_console_write(struct console *co, const char *s, unsigned int count)
 {
 	struct uart_pxa_port *up = serial_pxa_ports[co->index];
 	unsigned int ier;
+
+#ifdef CONFIG_DVFM
+	if (!mod_timer(&up->pxa_timer, jiffies + PXA_TIMER_TIMEOUT))
+		set_dvfm_constraint(up);
+#endif
 
 	clk_enable(up->clk);
 
@@ -1169,7 +1206,7 @@ static int __init
 serial_pxa_console_setup(struct console *co, char *options)
 {
 	struct uart_pxa_port *up;
-	int baud = 115200;
+	int baud = 9600;
 	int bits = 8;
 	int parity = 'n';
 	int flow = 'n';
@@ -1271,6 +1308,10 @@ static int serial_pxa_resume(struct platform_device *dev)
 {
         struct uart_pxa_port *sport = platform_get_drvdata(dev);
 
+#if defined(CONFIG_DVFM)
+	if (!mod_timer(&sport->pxa_timer, jiffies + PXA_TIMER_TIMEOUT))
+		set_dvfm_constraint(sport);
+#endif
         if (sport)
                 uart_resume_port(&serial_pxa_reg, &sport->port);
 
@@ -1288,6 +1329,14 @@ static int serial_pxa_resume(struct platform_device *dev)
 
         return 0;
 }
+
+#if defined(CONFIG_DVFM)
+static void pxa_timer_handler(unsigned long data)
+{
+	struct uart_pxa_port *up = (struct uart_pxa_port *)data;
+	unset_dvfm_constraint(up);
+}
+#endif
 
 static int serial_pxa_probe(struct platform_device *dev)
 {
@@ -1340,6 +1389,15 @@ static int serial_pxa_probe(struct platform_device *dev)
 		break;
 	}
 
+#if defined(CONFIG_DVFM)
+	sport->dvfm_lock.lock = SPIN_LOCK_UNLOCKED;
+	sport->dvfm_dev_idx = -1;
+	dvfm_register(sport->name, &(sport->dvfm_dev_idx));
+	init_timer(&sport->pxa_timer);
+	sport->pxa_timer.function = pxa_timer_handler;
+	sport->pxa_timer.data = (long)sport;
+#endif
+
 	sport->port.membase = ioremap(mmres->start, mmres->end - mmres->start + 1);
 	if (!sport->port.membase) {
 		ret = -ENOMEM;
@@ -1351,10 +1409,12 @@ static int serial_pxa_probe(struct platform_device *dev)
 	uart_add_one_port(&serial_pxa_reg, &sport->port);
 	platform_set_drvdata(dev, sport);
 
-
 	return 0;
 
  err_clk:
+#if defined(CONFIG_DVFM)
+	dvfm_unregister(sport->name, &(sport->dvfm_dev_idx));
+#endif
 	clk_put(sport->clk);
  err_free:
 	kfree(sport);
@@ -1364,6 +1424,10 @@ static int serial_pxa_probe(struct platform_device *dev)
 static int serial_pxa_remove(struct platform_device *dev)
 {
 	struct uart_pxa_port *sport = platform_get_drvdata(dev);
+
+#if defined(CONFIG_DVFM)
+	dvfm_unregister(sport->name, &(sport->dvfm_dev_idx));
+#endif
 
 	platform_set_drvdata(dev, NULL);
 

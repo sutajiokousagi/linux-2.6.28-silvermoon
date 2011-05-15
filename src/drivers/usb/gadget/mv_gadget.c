@@ -90,6 +90,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <linux/platform_device.h>
 #include <linux/workqueue.h>
 #include <linux/clk.h>
+#include <linux/pci.h>
 
 #include <asm/byteorder.h>
 #include <asm/dma.h>

@@ -43,9 +43,6 @@ static irqreturn_t ssp_interrupt(int irq, void *dev_id)
 	struct ssp_device *ssp = dev->ssp;
 	unsigned int status;
 
-	if(dev->handler)
-		return (dev->handler)(irq, dev_id);
-
 	status = __raw_readl(ssp->mmio_base + SSSR);
 	__raw_writel(status, ssp->mmio_base + SSSR);
 
@@ -249,17 +246,6 @@ int ssp_config(struct ssp_dev *dev, u32 mode, u32 flags, u32 psp_flags, u32 spee
 
 	return 0;
 }
-
-/**
- * ssp_set_handler - replace standard IRQ handler for SSP
- * @handler: replacement IRQ handler
- */
-int ssp_set_handler(struct ssp_dev *dev, irq_handler_t handler)
-{
-	dev->handler = handler;
-	return 0;
-}
-EXPORT_SYMBOL(ssp_set_handler);
 
 /**
  * ssp_init - setup the SSP port

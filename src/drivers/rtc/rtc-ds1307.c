@@ -108,7 +108,11 @@ static const struct chip_desc chips[] = {
 	.nvram56	= 1,
 },
 [ds_1337] = {
+#ifdef CONFIG_MACH_TETON_BGA
+	.alarm		= 0,
+#else
 	.alarm		= 1,
+#endif
 },
 [ds_1338] = {
 	.nvram56	= 1,
