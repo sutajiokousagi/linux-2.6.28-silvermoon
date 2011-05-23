@@ -121,11 +121,11 @@ static unsigned int COMPAT_MODE;
 #if defined(CONFIG_MACH_CHUMBY_SILVERMOON)
 static dma_addr_t old_fbstart_dma;
 static void *old_fbstart;
-#define DEFAULT_WIDTH	800
-#define DEFAULT_HEIGHT	600
+#define DEFAULT_WIDTH	1280
+#define DEFAULT_HEIGHT	720
 #else
-#define	DEFAULT_WIDTH	640
-#define DEFAULT_HEIGHT	480
+#define	DEFAULT_WIDTH   1280
+#define DEFAULT_HEIGHT	720
 #endif
 
 static struct _sViewPortInfo gViewPortInfo = {
@@ -2057,10 +2057,10 @@ static int __init pxa168fb_probe(struct platform_device *pdev)
 		/*
 		unsigned int i;
 		unsigned int old_fb0 = readl(fbi->reg_base + LCD_CFG_GRA_START_ADDR0);
-		old_fbstart = dma_alloc_writecombine(fbi->dev, 800*600*2,
+		old_fbstart = dma_alloc_writecombine(fbi->dev, 1280*720*2,
 						&old_fbstart_dma,
 						GFP_KERNEL);
-		for(i=0; i<800*600*2; i++) {
+		for(i=0; i<1280*720*2; i++) {
 			char *dst = (char *)phys_to_virt(((char *)old_fbstart_dma)+i);
 			char *src = (char *)phys_to_virt(((char *)old_fb0)+i);
 			*dst = *src;

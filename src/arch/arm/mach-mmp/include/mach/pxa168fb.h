@@ -248,14 +248,8 @@ struct _sCursorConfig {
 #define DUMB_MODE_RGB444_UPPER		5
 #define DUMB_MODE_RGB888		6
 
-/* default fb buffer size WVGA-32bits */
-#if defined(CONFIG_MACH_CHUMBY_SILVERMOON)
 /* default fb buffer size 800x600, double-buffered, 32-bits */
-#define DEFAULT_FB_SIZE	(800 * 600 * 4 * 2)
-#else
-/* default fb buffer size WVGA-32bits */
-#define DEFAULT_FB_SIZE	(800 * 480 * 4)
-#endif /* CONFIG_MACH_CHUMBY_SILVERMOON */
+#define DEFAULT_FB_SIZE	(1280 * 720 * 4 * 2)
 
 
 /*

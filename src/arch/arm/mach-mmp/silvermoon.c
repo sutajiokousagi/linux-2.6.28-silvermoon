@@ -191,7 +191,7 @@ static unsigned long silvermoon_pin_config[] __initdata = {
 	MFP_CFG(GPIO109, AF0),
 
 	/* SSP0 */
-	GPIO113_I2S_MCLK,
+	GPIO113_I2S_MCLK, // and this is in fact the I2S audio output to the FPGA
 	GPIO114_I2S_FRM,
 	GPIO115_I2S_BCLK,
 	GPIO116_I2S_RXD,
@@ -201,6 +201,13 @@ static unsigned long silvermoon_pin_config[] __initdata = {
 
 	/* sdh MMC2, wlan*/
 
+	MFP_CFG(GPIO90, AF3), // configure to be SSP3_CCLK, drive 25 MHz clock to FPGA
+	MFP_CFG(GPIO91, AF0),
+	MFP_CFG(GPIO92, AF0),
+	MFP_CFG(GPIO93, AF0),
+	MFP_CFG(GPIO94, AF0),
+	MFP_CFG(GPIO95, AF0),
+#if 0 // legacy
 	// henry@chumby.com - the Silvermoon board with eSD boot uses MMC2
 #if defined(CONFIG_CHUMBY_SILVERMOON_MMC2_WIFI)
  	GPIO90_MMC2_DAT3,
@@ -218,6 +225,8 @@ static unsigned long silvermoon_pin_config[] __initdata = {
 	CSM_DFI15_MMC3_CMD,
 	CSM_DFI14_MMC3_CLK,
 #endif
+#endif
+
 
 #endif
 
@@ -226,28 +235,38 @@ static unsigned long silvermoon_pin_config[] __initdata = {
 
 	// Touchscreen
 	CSM_GPIO118_TS_SCLK,
-	CSM_GPIO119_TS_CS_LV,
-	CSM_GPIO120_TS_MISO,
-	CSM_GPIO121_TS_MOSI,
+	//	CSM_GPIO119_TS_CS_LV, // fpga_cclk
+	MFP_CFG(GPIO119, AF0), // fpga_reset_n (output)
+	// CSM_GPIO120_TS_MISO,
+	MFP_CFG(GPIO120, AF0), // fpga_init_n (input, mostly)
+	CSM_GPIO121_TS_MOSI, // fpga_din (output)
+ 	MFP_CFG(GPIO97, AF0), // fpga_done (input)
 
 	// Bend sensor detect
 	CSM_GPIO89_CHUMBY_BEND,
 
 	// Headphone presence detect
-	CSM_GPIO97_HP_IN,
+	// CSM_GPIO97_HP_IN,
 
 	// CP UART
-	CSM_GPIO98_HOST_TO_CP,
-	CSM_GPIO99_CP_TO_HOST,
+	//	CSM_GPIO98_HOST_TO_CP, // there is no CP uart
+	//	CSM_GPIO99_CP_TO_HOST,
 
 	// Media insert detect
-	CSM_GPIO100_SDCDN,
-	CSM_GPIO101_XDCDN,
-	CSM_GPIO102_MSINS,
+	CSM_GPIO100_SDCDN, // input, USB overcurrent
+	//	CSM_GPIO101_XDCDN,
+	MFP_CFG(GPIO101, AF0),  // output, USB_PWR_EN
+	CSM_GPIO102_MSINS, // which is properly a GPIO for use as IR remote
 	CSM_GPIO103_CFCDN,
 
 	CSM_GPIO105_Xi2cSDA,
 	CSM_GPIO106_Xi2cSCL,
+
+	// vsync input
+	MFP_CFG(GPIO49, AF0),
+	// LED outputs
+	MFP_CFG(GPIO45, AF0),
+	MFP_CFG(GPIO46, AF0),
 
 };
 
@@ -381,40 +400,18 @@ static struct i2c_pxa_platform_data xi2c_info __initdata = {
 
 // These values are mostly taken from aspenite.c which has the only
 // example of video mode(s) set for 800x600 (albeit not in RGB565 DMA mode)
-#if defined(CONFIG_CHUMBY_800_480_VIDEO)
-#warning "----------------------->Using silvermoon_tablet config<---------------------------"
-static struct fb_videomode video_modes_aspen[] = {
-  [0] = {
-    .pixclock       = 24500,                                                                        
-    //    .pixclock       = 12820,
-    .refresh        = 60,
-    .xres           = 800,
-    .yres           = 480,
-    .hsync_len      = 5 /*128*/,
-    .left_margin    = 16 /*215*/,
-    .right_margin   = 8,
-    .vsync_len      = 2 /*4*/,
-    .upper_margin   = 8, // 23                                                                                  
-    .lower_margin   = 5, // 1                                                                                   
-	// henry - if these are set, invert vsync / hsync are turned OFF:
-	// FB_SYNC_VERT_HIGH_ACT | FB_SYNC_HOR_HIGH_ACT,
-    .sync           = 0,
-  },
-
-};
-#else
 static struct fb_videomode video_modes_aspen[] = {
 	[0] = {
-		.pixclock       = 25641,
+		.pixclock       = 74176,
 		.refresh        = 60,
-		.xres           = 800,
-		.yres           = 600,
-		.hsync_len      = 128 /*128*/,
-		.left_margin    = 215 /*215*/,
-		.right_margin   = 40,
-		.vsync_len      = 4 /*4*/,
-		.upper_margin   = 34, // 23
-		.lower_margin   = 14, // 1
+		.xres           = 1280,
+		.yres           = 720,
+		.hsync_len      = 40 /*128*/,
+		.left_margin    = 110 /*215*/,
+		.right_margin   = 220,
+		.vsync_len      = 5 /*4*/,
+		.upper_margin   = 5, // 23
+		.lower_margin   = 20, // 1
 
 		// henry - if these are set, invert vsync / hsync are turned OFF:
 		// FB_SYNC_VERT_HIGH_ACT | FB_SYNC_HOR_HIGH_ACT,
@@ -422,7 +419,6 @@ static struct fb_videomode video_modes_aspen[] = {
 	},
 
 };
-#endif
 
 static void silvermoon_lcd_power(struct pxa168fb_info *fbi, unsigned int spi_gpio_cs, unsigned int spi_gpio_reset, int on)
 {
@@ -477,12 +473,7 @@ struct pxa168fb_mach_info silvermoon_lcd_info __initdata = {
 	.pxa168fb_lcd_power     = silvermoon_lcd_power,
 	.gpio_output_data       = 0x10,	// LCD_SPU_DUMB_CTRL[27:20]
 	.gpio_output_mask       = 0xff,	// LCD_SPU_DUMB_CTRL[19:12]
-#if defined(CONFIG_CHUMBY_800_480_VIDEO)
-#warning "----------------------->non-inverted pixclk<---------------------------"
-	.invert_pixclock        = 0,
-#else
 	.invert_pixclock        = 1,
-#endif
 	.invert_vsync           = 1,
 	.invert_hsync           = 1,
 // New to 2.6.28 bsp

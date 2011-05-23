@@ -6,6 +6,16 @@ menu "Character devices"
 
 #
 # Generic chumby timer driver
+config CHUMBY_XILINX
+       tristate "Chumby xilinx fpga configuration driver"
+       depends on MACH_CHUMBY_SILVERMOON
+       default m
+       ---help---
+         This configures an SSP as a character device that can accept a bitfile
+	 and blast it into an FPGA to configure it. Very crude but it works.
+
+	 Say "m" to load this as a module.  
+
 config CHUMBY_TIMER
 	tristate "Chumby /dev/timerx"
 	depends on MACH_CHUMBY_SILVERMOON

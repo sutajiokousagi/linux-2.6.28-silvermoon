@@ -9,6 +9,7 @@ FONTMAPFILE = cp437.uni
 
 obj-y	 += mem.o random.o tty_io.o n_tty.o tty_ioctl.o tty_ldisc.o tty_buffer.o tty_port.o
 
+obj-$(CONFIG_CHUMBY_XILINX)	+= chumby_xilinx.o
 obj-$(CONFIG_CHUMBY_TIMER)	+= chumby_timer.o
 obj-$(CONFIG_CHUMBY_SENSE1)	+= chumby_sense1.o
 obj-$(CONFIG_CHUMBY_REGISTERS)	+= chumby_regs.o
