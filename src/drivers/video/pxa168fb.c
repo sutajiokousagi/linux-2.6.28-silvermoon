@@ -1177,6 +1177,44 @@ static int __init get_fb_size(char *str)
 }
 __setup("fb_size=", get_fb_size);
 
+static struct delayed_work event_work;
+static int work_queued = 0;
+static struct pxa168fb_info *myfbi;
+
+static void hpd_update(struct work_struct *work) {
+  unsigned long temp = atomic_long_read(&(work->data));
+  struct pxa168fb_info *fbi = myfbi;
+  int retval;
+  char *envp[2];
+
+  // trigger a udev event when an attach or detach happens
+  if( __gpio_get_value(91) ? 1 : 0 ) {
+    printk( "got HPD attach event.\n" );
+    envp[0] = "TYPE=ATTACH";
+  } else {
+    printk( "got HPD detach event.\n" );
+    envp[0] = "TYPE=DETACH";
+  }
+  envp[1] = NULL;
+  retval = kobject_uevent_env(&(fbi->dev->kobj), KOBJ_CHANGE, envp);
+  printk( "kobject_uvent_env returned with %d\n", retval );
+
+  work_queued = 0;
+}
+
+static irqreturn_t hpd_isr(int irqno, void *dev_id) {
+  struct pxa168fb_info *fbi = (struct pxa168fb_info *)dev_id;
+
+  if(!work_queued) {
+    work_queued = 1;
+    INIT_DELAYED_WORK(&event_work, hpd_update);
+    myfbi = fbi;
+    schedule_delayed_work(&event_work, 1); // 1 msec to fire
+  }
+
+  return IRQ_HANDLED;
+}
+
 static int __init pxa168fb_probe(struct platform_device *pdev)
 {
 	struct pxa168fb_mach_info *mi;
@@ -1362,6 +1400,16 @@ static int __init pxa168fb_probe(struct platform_device *pdev)
 	 * Enable GFX interrupt
 	 */
 	writel(GRA_FRAME_IRQ0_ENA(0x1), fbi->reg_base + SPU_IRQ_ENA);
+
+	gpio_request(91, "HPD report");
+	gpio_direction_input(91);
+	gpio_free(91);
+
+	// allocate the HPD IRQ
+	ret = request_irq(IRQ_GPIO(91), hpd_isr, IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING, "HPD trigger", fbi);
+	if( ret ) {
+	  printk( "Can't allocate IRQ 91 for HPD trigger\n" );
+	}
 
 	/*
 	 * Register framebuffer.

@@ -490,6 +490,9 @@ void fpga_init_hw(void) {
   gpio_direction_input(49);
   gpio_free(49);
 
+  gpio_request(91, "HPD report");
+  gpio_direction_input(91);
+  gpio_free(91);
 
   printk("SSP2 clock enable (52 MHz)\n");
   __raw_writel(0x33,(APB_VIRT_BASE + 0x15820));
