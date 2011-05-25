@@ -324,10 +324,10 @@ EXPORT_SYMBOL(uart_update_timeout);
  *
  *	Decode the termios structure into a numeric baud rate,
  *	taking account of the magic 38400 baud rate (with spd_*
- *	flags), and mapping the %B0 rate to 115200 baud.
+ *	flags), and mapping the %B0 rate to 9600 baud.
  *
  *	If the new baud rate is invalid, try the old termios setting.
- *	If it's still invalid, we try 115200 baud.
+ *	If it's still invalid, we try 9600 baud.
  *
  *	Update the @termios structure to reflect the baud rate
  *	we're actually going to be using. Don't do this for the case
@@ -365,7 +365,7 @@ uart_get_baud_rate(struct uart_port *port, struct ktermios *termios,
 		 */
 		if (baud == 0) {
 			hung_up = 1;
-			baud = 115200;
+			baud = 9600;
 		}
 
 		if (baud >= min && baud <= max)
@@ -387,10 +387,10 @@ uart_get_baud_rate(struct uart_port *port, struct ktermios *termios,
 
 		/*
 		 * As a last resort, if the quotient is zero,
-		 * default to 115200 bps
+		 * default to 9600 bps
 		 */
 		if (!hung_up)
-			tty_termios_encode_baud_rate(termios, 115200, 115200);
+			tty_termios_encode_baud_rate(termios, 9600, 9600);
 	}
 
 	return 0;
@@ -2247,7 +2247,7 @@ static int uart_poll_init(struct tty_driver *driver, int line, char *options)
 	struct uart_driver *drv = driver->driver_state;
 	struct uart_state *state = drv->state + line;
 	struct uart_port *port;
-	int baud = 115200;
+	int baud = 9600;
 	int bits = 8;
 	int parity = 'n';
 	int flow = 'n';
@@ -2369,8 +2369,8 @@ int uart_register_driver(struct uart_driver *drv)
 	normal->type		= TTY_DRIVER_TYPE_SERIAL;
 	normal->subtype		= SERIAL_TYPE_NORMAL;
 	normal->init_termios	= tty_std_termios;
-	normal->init_termios.c_cflag = B115200 | CS8 | CREAD | HUPCL | CLOCAL;
-	normal->init_termios.c_ispeed = normal->init_termios.c_ospeed = 115200;
+	normal->init_termios.c_cflag = B9600 | CS8 | CREAD | HUPCL | CLOCAL;
+	normal->init_termios.c_ispeed = normal->init_termios.c_ospeed = 9600;
 	normal->flags		= TTY_DRIVER_REAL_RAW | TTY_DRIVER_DYNAMIC_DEV;
 	normal->driver_state    = drv;
 	tty_set_operations(normal, &uart_ops);

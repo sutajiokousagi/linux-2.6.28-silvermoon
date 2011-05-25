@@ -52,7 +52,10 @@
  */
 #define CACHE_DLINESIZE	32
 
+#if !defined(CPU_PXA168_B0)
 #define BAD_CACHE_LINE_OFFSET	(PAGE_SZ - CACHE_DLINESIZE)
+#endif
+
 /*
  * Run with L2 enabled.
  */
@@ -215,8 +218,10 @@ ENTRY(mohawk_coherent_kern_range)
  */
 ENTRY(mohawk_coherent_user_range)
 	bic	r0, r0, #CACHE_DLINESIZE - 1
+#if !defined(CPU_PXA168_B0)
 #if defined(CONFIG_CPU_L2_CACHE)
 	mov	r2,	r0
+#endif
 #endif
 1:	mcr	p15, 0, r0, c7, c10, 1		@ clean D entry
 	mcr	p15, 0, r0, c7, c5, 1		@ invalidate I entry
@@ -224,6 +229,7 @@ ENTRY(mohawk_coherent_user_range)
 	cmp	r0, r1
 	blo	1b
 	mcr	p15, 0, r0, c7, c10, 4		@ drain WB
+#if !defined(CPU_PXA168_B0)
 #if defined(CONFIG_CPU_L2_CACHE)
 	mov		r0, r2
 	add		r0, #BAD_CACHE_LINE_OFFSET
@@ -235,6 +241,7 @@ ENTRY(mohawk_coherent_user_range)
 2:
 #endif
 	mcr	p15, 0, r0, c7, c10, 4		@ drain WB
+#endif
 	mov	pc, lr
 
 /*
@@ -251,9 +258,11 @@ ENTRY(mohawk_flush_kern_dcache_page)
 	add	r0, r0, #CACHE_DLINESIZE
 	cmp	r0, r1
 	blo	1b
+#if !defined(CPU_PXA168_B0)
 #if defined(CONFIG_CPU_L2_CACHE)
 	sub		r1, r1,	#CACHE_DLINESIZE
 	mcr		p15, 1, r1, c7, c15, 1		@ L2C clean+invalidate entry
+#endif
 #endif
 	mov	r0, #0
 	mcr	p15, 0, r0, c7, c5, 0		@ invalidate I cache

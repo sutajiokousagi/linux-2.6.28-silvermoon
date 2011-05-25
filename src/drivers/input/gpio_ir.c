@@ -155,6 +155,7 @@ if ((word << CODE_SIZE) == (CUSTOM_CODE << CODE_SIZE) && !dont_send_more) {
 /*				printk(KERN_INFO "The key %d was found\n",ir_key); */
 				input_report_key(cir_input_dev, ir_key , 1);
 				input_report_key(cir_input_dev, ir_key , 0);
+				cb_start = cb_end;
 				dont_send_more = 1;
 				break;
 			}

@@ -35,4 +35,4 @@ obj-$(CONFIG_TOUCHSCREEN_WM97XX_MAINSTONE)	+= mainstone-wm97xx.o
 obj-$(CONFIG_TSC2007)		+= tsc2007.o
 obj-$(CONFIG_SANREMO)		+= sanremo_touch.o
 obj-$(CONFIG_TOUCHSCREEN_MICCO)		+= micco_touch.o
-obj-$(CONFIG_TOUCHSCREEN_ASPEN)		+= silvermoon-ts.o silvermoon-tsb.o
+obj-$(CONFIG_TOUCHSCREEN_ASPEN)		+= silvermoon-tsb.o

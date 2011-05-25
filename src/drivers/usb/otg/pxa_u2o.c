@@ -57,7 +57,7 @@
 #define DRIVER_DESC "Marvell USB 2.0 OTG Controller"
 static const char driver_name [] = "pxa-u2otg";
 static const char driver_desc [] = DRIVER_DESC;
-extern u8 mini_a_plugin;
+u8 mini_a_plugin;
 
 struct pxa_u2otg 
 {

@@ -42,50 +42,11 @@ static int pxau2h_ehci_clk_set(int en)
 	return 0;
 }
 
-#ifdef CONFIG_CHUMBY_SILVERMOON_MEDIA
-#include <linux/irq.h>
-#include <linux/delay.h>
-#include <mach/gpio.h>
-
-#define SD_INSERT_GPIO		100
-#define XD_INSERT_GPIO		101
-#define MS_INSERT_GPIO		102
-#define CF_INSERT_GPIO		103
-
-#define SD_INSERT_IRQ 		IRQ_GPIO(SD_INSERT_GPIO)
-#define XD_INSERT_IRQ 		IRQ_GPIO(XD_INSERT_GPIO)
-#define MS_INSERT_IRQ 		IRQ_GPIO(MS_INSERT_GPIO)
-#define CF_INSERT_IRQ 		IRQ_GPIO(CF_INSERT_GPIO)
-
-#define MY_GPIO_REGBANK(x) 	( (x/32) )    
-#define MY_GPIO_BASE_OFFSET(x) 	(  MY_GPIO_REGBANK(x) > 2 ? 0x100: MY_GPIO_REGBANK(x) * 0x4 )	 // extra offset added to basic base to select the right bank register
-#define MY_GPIO_MASK(x) 	(1 << (x - ( MY_GPIO_REGBANK(x) * 32)))		// bit mask  for GPIO
-
-
-#define MY_GPIO_PLR  0x0000  // pin level readback
-
-struct my_gpio {
-  void __iomem  *mmio_base;
-  unsigned long phys_base;
-  unsigned long size;
-} my_gpio;
-static struct timer_list event_timer;
-static int timer_queued;
-
-
-#endif //CONFIG_CHUMBY_SILVERMOON_MEDIA
-
-
 /* called during probe() after chip reset completes */
 static int pxau2h_ehci_setup(struct usb_hcd *hcd)
 {
 	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
 	int retval;
-
-#if defined(CONFIG_MACH_CHUMBY_SILVERMOON) && defined(CONFIG_FORCE_USB_FULLSPEED_HUB)
-	set_bit(1, &ehci->companion_ports); // bunnie -- temporarily force companion mode for full-speed
-#endif
-
 
 	/* EHCI registers start at offset 0x100 */
 	ehci->caps = hcd->regs + U2x_CAPREGS_OFFSET;
@@ -111,6 +72,16 @@ static int pxau2h_ehci_setup(struct usb_hcd *hcd)
 	ehci_reset(ehci);
 
 	return retval;
+}
+
+static int ignore_ehci_connect(struct usb_hcd *hcd, struct usb_device *udev)
+{
+        return 0;
+}
+
+static int ignore_ehci_disconnect(struct usb_hcd *hcd)
+{
+	return 0;
 }
 
 static const struct hc_driver pxau2h_ehci_hc_driver = {
@@ -157,152 +128,12 @@ static const struct hc_driver pxau2h_ehci_hc_driver = {
 	.bus_resume = ehci_bus_resume,
 	.relinquish_port = ehci_relinquish_port,
 	.port_handed_over = ehci_port_handed_over,
+
+#ifdef  CONFIG_USB_OTG
+	.disconnect = ignore_ehci_disconnect,
+	.connect = ignore_ehci_connect,
+#endif
 };
-
-#ifdef CONFIG_CHUMBY_SILVERMOON_MEDIA
-
-
-static inline int read_gpio_line(int gpio)
-{
-    // read the card insertion interrupt line: bit off means card is inserted
-	return !((__raw_readl(GPIO_REGS_VIRT+0x100)) & GPIO_bit(gpio));
-}
-
-
-enum card_type {
-	CARD_NONE,
-	CARD_CF,
-	CARD_MS,
-	CARD_XD,
-	CARD_SD,
-	CARD_UNKNOWN,
-};
-
-enum card_type silvermoon_media_inserted(void)
-{
-	if(read_gpio_line(SD_INSERT_GPIO))
-		return CARD_SD;
-	if(read_gpio_line(XD_INSERT_GPIO))
-		return CARD_XD;
-	if(read_gpio_line(MS_INSERT_GPIO))
-		return CARD_MS;
-	if(read_gpio_line(CF_INSERT_GPIO))
-		return CARD_CF;
-	return CARD_UNKNOWN;
-}
-
-static char *CARD_TYPES[] = {
-	"none",
-	"CF",
-	"MS",
-	"XD",
-	"SD",
-	"unknown",
-};
-
-static void insertion_alert(unsigned long dev_id)
-{
-	char *envp[2];
-	char card_type_string[48];
-	char card_type_tmp[32];
-	int  types_found = 0;
-	struct usb_hcd *hcd = (struct usb_hcd *)dev_id;
-
-	memset(card_type_tmp, 0, sizeof(card_type_tmp));
-
-	if(read_gpio_line(SD_INSERT_GPIO)) {
-		if(types_found) {
-			char card_type_tmp2[32];
-			strcpy(card_type_tmp2, card_type_tmp);
-			snprintf(card_type_tmp, sizeof(card_type_tmp), "%s:%s",
-					card_type_tmp2, CARD_TYPES[CARD_SD]);
-		}
-		else {
-			snprintf(card_type_tmp, sizeof(card_type_tmp), CARD_TYPES[CARD_SD]);
-		}
-		types_found++;
-	}
-	if(read_gpio_line(XD_INSERT_GPIO)) {
-		if(types_found) {
-			char card_type_tmp2[32];
-			strcpy(card_type_tmp2, card_type_tmp);
-			snprintf(card_type_tmp, sizeof(card_type_tmp), "%s:%s",
-					card_type_tmp2, CARD_TYPES[CARD_XD]);
-		}
-		else {
-			snprintf(card_type_tmp, sizeof(card_type_tmp), CARD_TYPES[CARD_XD]);
-		}
-		types_found++;
-	}
-	if(read_gpio_line(MS_INSERT_GPIO)) {
-		if(types_found) {
-			char card_type_tmp2[32];
-			strcpy(card_type_tmp2, card_type_tmp);
-			snprintf(card_type_tmp, sizeof(card_type_tmp), "%s:%s",
-					card_type_tmp2, CARD_TYPES[CARD_MS]);
-		}
-		else {
-			snprintf(card_type_tmp, sizeof(card_type_tmp), CARD_TYPES[CARD_MS]);
-		}
-		types_found++;
-	}
-	if(read_gpio_line(CF_INSERT_GPIO)) {
-		if(types_found) {
-			char card_type_tmp2[32];
-			strcpy(card_type_tmp2, card_type_tmp);
-			snprintf(card_type_tmp, sizeof(card_type_tmp), "%s:%s",
-					card_type_tmp2, CARD_TYPES[CARD_CF]);
-		}
-		else {
-			snprintf(card_type_tmp, sizeof(card_type_tmp), CARD_TYPES[CARD_CF]);
-		}
-		types_found++;
-	}
-
-	if(!types_found)
-		strcpy(card_type_tmp, CARD_TYPES[CARD_UNKNOWN]);
-
-
-	// Copy the discovered card type to the user.
-	snprintf(card_type_string, sizeof(card_type_string),
-			"CARD_TYPE=%s", card_type_tmp);
-	envp[0] = card_type_string;
-	envp[1] = NULL;
-
-	// SMC -- So we'd like to just reset the port.  At one point I had
-	// lots of code in here to try and reset the port.  Then I realized
-	// we already have hub-ctrl that can do that.  So rather than resetting
-	// the port in kernelspace, we do it in userspace.  Everyone's happy.
-	kobject_uevent_env(&hcd->self.controller->kobj, KOBJ_CHANGE, envp);
-	timer_queued = 0;
-	return;
-}
-
-/*
- * ISR for the CardDetect Pin
- */
-static irqreturn_t card_detect_isr(int irq, void *dev_id)
-{
-	struct usb_hcd *hcd = (struct usb_hcd *)dev_id;
-	int msecs;
-
-
-	/* Debounce the port by queueing the handler to happen in 2 msecs */
-	msecs = 2;
-    if(!timer_queued) {
-        timer_queued = 1;
-        init_timer(&event_timer);
-        event_timer.data     = (unsigned long)hcd;
-        event_timer.function = insertion_alert;
-        event_timer.expires  = jiffies + msecs_to_jiffies(msecs);
-        add_timer(&event_timer);
-    }
-
-	return IRQ_HANDLED;
-}
-
-#endif // CONFIG_CHUMBY_SILVERMOON_MEDIA
-
 
 static int pxau2h_ehci_probe(struct platform_device *pdev)
 {
@@ -311,7 +142,7 @@ static int pxau2h_ehci_probe(struct platform_device *pdev)
 	struct usb_hcd *hcd;
 	int irq, retval, tmp;
 
-	dev_dbg(&pdev->dev,"Initializing PXA EHCI-SOC USB Controller(U2H)\n");
+	dev_dbg(&pdev->dev, "Initializing PXA EHCI-SOC USB Controller(U2H)\n");
 	info = dev->platform_data;
 
 	pxau2h_ehci_clk_set(1);
@@ -338,7 +169,7 @@ static int pxau2h_ehci_probe(struct platform_device *pdev)
 		goto err1;
 	}
 
-	printk("u2h regbase 0x%p phybase 0x%p irq %d\n", (void *)info->regbase,
+	dev_dbg(&pdev->dev, "u2h regbase 0x%p phybase 0x%p irq %d\n", (void *)info->regbase,
 			(void *)info->phybase, irq);
 
 	if (!info->phy_init || info->phy_init((unsigned int)info->phybase)) {
@@ -376,63 +207,8 @@ static int pxau2h_ehci_probe(struct platform_device *pdev)
 	if (retval != 0) {
 		goto err2;
 	}
-
-#ifdef CONFIG_CHUMBY_SILVERMOON_MEDIA
-	printk( "[ehci-pxau2h.c] Silvermoon media insertion / removal detection enabled\n" );
-
-	set_irq_type(SD_INSERT_IRQ, IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING);
-	set_irq_type(XD_INSERT_IRQ, IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING);
-	set_irq_type(CF_INSERT_IRQ, IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING);
-	set_irq_type(MS_INSERT_IRQ, IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING );
-
-
-	if (request_irq(CF_INSERT_IRQ, card_detect_isr, IRQF_DISABLED,
-					"compact-detect", hcd)) {
-		dev_err(&pdev->dev, "failed to request compact-flash detect interrupt\n" );
-		goto err_irq;
-	}
-
-	if (request_irq(MS_INSERT_IRQ, card_detect_isr, IRQF_DISABLED,
-					"memstick-detect", hcd)) {
-		dev_err(&pdev->dev, "failed to request memstick detect interrupt\n" );
-		goto err_irq;
-	}
-
-	if (request_irq(XD_INSERT_IRQ, card_detect_isr, IRQF_DISABLED,
-					"xd-card-detect", hcd)) {
-		dev_err(&pdev->dev, "failed to request XD-card detect interrupt\n" );
-		goto err_irq;
-	}
-
-	if (request_irq(SD_INSERT_IRQ, card_detect_isr, IRQF_DISABLED,
-					"sd-card-detect", hcd)) {
-		dev_err(&pdev->dev, "failed to request SD-card detect interrupt\n" );
-		goto err_irq;
-	}
-
-	/* Inform userspace in 8 seconds that a card was inserted */
-	timer_queued = 1;
-	init_timer(&event_timer);
-	event_timer.data     = (unsigned long)hcd;
-	event_timer.function = insertion_alert;
-	event_timer.expires  = jiffies + msecs_to_jiffies(8000);
-	add_timer(&event_timer);
-
-#endif
-
 	platform_set_drvdata(pdev, hcd);
 	return retval;
-
-#ifdef CONFIG_CHUMBY_SILVERMOON_MEDIA
-	iounmap(my_gpio.mmio_base);
-	release_mem_region(my_gpio.phys_base, my_gpio.size);
-err_irq:
-	retval = -ENOENT;
-	free_irq(XD_INSERT_IRQ, hcd);
-	free_irq(SD_INSERT_IRQ, hcd);
-	free_irq(MS_INSERT_IRQ, hcd);
-	free_irq(CF_INSERT_IRQ, hcd);
-#endif
 
 err2:
 		usb_put_hcd(hcd);
@@ -445,16 +221,6 @@ err1:
 static int pxau2h_ehci_remove(struct platform_device *pdev)
 {
 	struct usb_hcd  *hcd = platform_get_drvdata(pdev);
-
-#ifdef CONFIG_CHUMBY_SILVERMOON_MEDIA
-	iounmap(my_gpio.mmio_base);
-	release_mem_region(my_gpio.phys_base, my_gpio.size);
-
-	free_irq(XD_INSERT_IRQ, hcd);
-	free_irq(SD_INSERT_IRQ, hcd);
-	free_irq(MS_INSERT_IRQ, hcd);
-	free_irq(CF_INSERT_IRQ, hcd);
-#endif
 
 	if (HC_IS_RUNNING(hcd->state))
 		hcd->state = HC_STATE_QUIESCING;

@@ -132,6 +132,12 @@ pm_resume_from_sleep:
 	movne	pc, r8
 	mov	r0, r9
 
+	@ enable PMU user access
+	mov    r9, #0x1
+	mrc    p15, 0, r9, c15, c9, 0
+	orr    r9, r9, #0x1
+	mcr    p15, 0, r9, c15, c9, 0
+
 	@ Step 2
 	ldr	r9, [r0, #SleepState_Cp15_ACR_MMU]
 	ldr	r8, [r0, #SleepState_Cp15_AUXCR_MMU]

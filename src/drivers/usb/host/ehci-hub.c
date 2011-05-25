@@ -650,9 +650,9 @@ static int ehci_hub_control (
 		if (temp & PORT_CSC) {
 			status |= 1 << USB_PORT_FEAT_C_CONNECTION;
 #ifdef CONFIG_USB_OTG
-			if (temp & PORT_CONNECT)
+			if (temp & PORT_CONNECT && hcd->driver->connect)
 				hcd->driver->connect(hcd);
-			else
+			else if(hcd->driver->disconnect)
 				hcd->driver->disconnect(hcd);
 #endif
 		}

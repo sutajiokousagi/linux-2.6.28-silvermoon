@@ -265,7 +265,7 @@ static int pxa9xx_ehci_probe(struct platform_device *pdev)
 	hcd->self.bus_name = dev->bus_id;
 	hcd->product_desc ="pxa9xx ehci";
 
-	clk_enable(clk_get(NULL, "USBCLK"));
+	clk_enable(clk_get(NULL, "U2OCLK"));
 
 #ifndef CONFIG_USB_OTG
 	/* enable clock & transceiver */
@@ -299,6 +299,7 @@ static int pxa9xx_ehci_probe(struct platform_device *pdev)
          */
         ehci->hcs_params = ehci_readl(ehci, &ehci->caps->hcs_params);
 
+	clk_disable(clk_get(NULL, "U2OCLK"));
 	return 0;
 
 err2:
