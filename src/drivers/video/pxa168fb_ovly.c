@@ -1357,7 +1357,7 @@ static int pxa168fb_release(struct fb_info *fi, int user)
 
 
 	if (atomic_dec_and_test(&global_op_count)) {
-#if defined(CONFIG_MACH_CHUMBY_SILVERMOON)
+#if !defined(CONFIG_MACH_CHUMBY_SILVERMOON)
 		/* clear buffer list. */
 		mutex_lock(&fbi->access_ok);
 		clearFilterBuf(filterBufList, RESET_BUF);
