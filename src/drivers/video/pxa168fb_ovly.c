@@ -856,7 +856,7 @@ static int pxa168fb_ioctl(struct fb_info *fi, unsigned int cmd,
 	struct pxa168fb_info *fbi = (struct pxa168fb_info *)fi->par;
 	u32 x;
 	int vmode = 0;
-	int gfx_on = 1;
+	int gfx_on = 0;
 	int vid_on = 1;
         int val;
         unsigned char param;
@@ -1357,6 +1357,7 @@ static int pxa168fb_release(struct fb_info *fi, int user)
 
 
 	if (atomic_dec_and_test(&global_op_count)) {
+#if defined(CONFIG_MACH_CHUMBY_SILVERMOON)
 		/* clear buffer list. */
 		mutex_lock(&fbi->access_ok);
 		clearFilterBuf(filterBufList, RESET_BUF);
@@ -1371,6 +1372,7 @@ static int pxa168fb_release(struct fb_info *fi, int user)
 			val &= ~(CFG_DMA_ENA_MASK);
 			writel(val, fbi->reg_base + LCD_SPU_DMA_CTRL0);
 		}
+#endif
 	}
 	fbi->active = 0;
 
@@ -1648,6 +1650,50 @@ static void set_graphics_start(struct fb_info *fi, int xoffset, int yoffset)
 }
 
 
+static void set_dumb_panel_control(struct fb_info *info)
+{
+	struct pxa168fb_info *fbi = info->par;
+	struct pxa168fb_mach_info *mi = fbi->dev->platform_data;
+	u32 x;
+
+	dev_dbg(info->dev, "Enter %s\n", __FUNCTION__);
+
+	/*
+	 * Preserve enable flag.
+	 */
+	x = readl(fbi->reg_base + LCD_SPU_DUMB_CTRL) & 0x00000001;
+
+	x |= (fbi->is_blanked ? 0x7 : mi->dumb_mode) << 28;
+	x |= mi->gpio_output_data << 20;
+	x |= mi->gpio_output_mask << 12;
+	x |= mi->panel_rgb_reverse_lanes ? 0x00000080 : 0;
+	x |= mi->invert_composite_blank ? 0x00000040 : 0;
+	x |= (info->var.sync & FB_SYNC_COMP_HIGH_ACT) ? 0x00000020 : 0;
+	x |= mi->invert_pix_val_ena ? 0x00000010 : 0;
+	x |= (info->var.sync & FB_SYNC_VERT_HIGH_ACT) ? 0x00000008 : 0;
+	x |= (info->var.sync & FB_SYNC_HOR_HIGH_ACT) ? 0x00000004 : 0;
+	x |= mi->invert_pixclock ? 0x00000002 : 0;
+
+	writel(x, fbi->reg_base + LCD_SPU_DUMB_CTRL);
+}
+
+
+static void set_dumb_screen_dimensions(struct fb_info *info)
+{
+	struct pxa168fb_info *fbi = info->par;
+	struct fb_var_screeninfo *v = &info->var;
+	int x;
+	int y;
+
+	dev_dbg(info->dev, "Enter %s\n", __FUNCTION__);
+
+	x = v->xres + v->right_margin + v->hsync_len + v->left_margin;
+	y = v->yres + v->lower_margin + v->vsync_len + v->upper_margin;
+
+	writel((y << 16) | x, fbi->reg_base + LCD_SPUT_V_H_TOTAL);
+}
+
+
 static int pxa168fb_set_par(struct fb_info *fi)
 {
 	struct pxa168fb_info *fbi = fi->par;
@@ -1799,6 +1845,21 @@ static int pxa168fb_set_par(struct fb_info *fi)
 
         fi->fix.smem_len = var->xres_virtual * var->yres_virtual * var->bits_per_pixel/8;
         fi->screen_size = fi->fix.smem_len;
+
+#if defined(CONFIG_MACH_CHUMBY_SILVERMOON)
+	/*
+	 * Configure dumb panel ctrl regs & timings.
+	 */
+	//set_dumb_panel_control(info);
+	set_dumb_screen_dimensions(fi);
+
+	writel((var->yres << 16) | var->xres,
+		fbi->reg_base + LCD_SPU_V_H_ACTIVE);
+	writel((var->left_margin << 16) | var->right_margin,
+			fbi->reg_base + LCD_SPU_H_PORCH);
+	writel((var->upper_margin << 16) | var->lower_margin,
+			fbi->reg_base + LCD_SPU_V_PORCH);
+#endif
 
 
 	return 0;
@@ -2072,7 +2133,7 @@ static int __init pxa168fb_probe(struct platform_device *pdev)
 		unsigned int old_fb0 = readl(fbi->reg_base + LCD_CFG_GRA_START_ADDR0);
 		gra_dma_base_address = old_fb0;
 		writel(0x00000000, fbi->reg_base + LCD_SPUT_DMA_OVSA_HPXL_VLN);
-		CHLOG("Just pointed fb0 at %p\n", old_fb0);
+		//CHLOG("Just pointed fb0 at %p\n", old_fb0);
 	}
 
 	/* Set alpha to full-on by default */
@@ -2081,14 +2142,15 @@ static int __init pxa168fb_probe(struct platform_device *pdev)
 	fbi->ckey_alpha.config    = 0xff;
 
 	/* Switch fb1 to RGB565, leaving this fb0 as ARGB8888 */
-	writel(0x08401111, fbi->reg_base + LCD_SPU_DMA_CTRL0);
+	//writel(0x08401111, fbi->reg_base + LCD_SPU_DMA_CTRL0);
 	/*
 	 * Switch to custom alpha, and make fb0 transparent.
 	 * This will allow us to keep fb1 as RGB565, and leave it with the logo
 	 * that was drawn in the bootloader, while we switch this framebuffer
 	 * to ARGB8888 and redraw the logo.
 	 */
-	writel(0x20020081, fbi->reg_base + LCD_SPU_DMA_CTRL1);
+	//writel(0x20020081, fbi->reg_base + LCD_SPU_DMA_CTRL1);
+	writel(0x90000001, fbi->reg_base + LCD_CFG_SCLK_DIV);
 #else
 	/*
 	 * Configure default register values.

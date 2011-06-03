@@ -466,7 +466,7 @@ struct pxa168fb_mach_info silvermoon_lcd_info __initdata = {
 	.id                     = "Base-silvermoon",
 	.modes                  = video_modes_aspen,
 	.num_modes              = ARRAY_SIZE(video_modes_aspen),
-	.pix_fmt                = PIX_FMT_RGBA888,
+	.pix_fmt                = PIX_FMT_RGB888PACK,
 	.io_pin_allocation_mode = PIN_MODE_DUMB_18_GPIO | 0x20, // No crossing 1K boundary
 	.dumb_mode              = DUMB_MODE_RGB666,	// LCD_SPU_DUMB_CTRL[31:28]
 	.active                 = 1, // LCD active (boolean)
@@ -493,9 +493,10 @@ struct pxa168fb_mach_info silvermoon_lcd_ovly_info __initdata = {
         .id                     = "Ovly-silvermoon",
         .modes                  = video_modes_aspen,
         .num_modes              = ARRAY_SIZE(video_modes_aspen),
-        .pix_fmt                = PIX_FMT_RGBA888,
+        //.pix_fmt                = PIX_FMT_RGBA888,
+        .pix_fmt                = PIX_FMT_RGB565,
         .io_pin_allocation_mode = PIN_MODE_DUMB_18_GPIO | 0x20, // No crossing 1K boundary
-		.dumb_mode              = DUMB_MODE_RGB666,	// LCD_SPU_DUMB_CTRL[31:28]
+	.dumb_mode              = DUMB_MODE_RGB666,	// LCD_SPU_DUMB_CTRL[31:28]
         .active                 = 1,
         //.spi_ctrl               = CFG_SCLKCNT(2) | CFG_TXBITS(15) | CFG_SPI_SEL(1) | CFG_SPI_3W4WB(1) | CFG_SPI_ENA(1),
         //.spi_gpio_cs            = 0 /*GPIO_EXT1(14)*/,
@@ -515,6 +516,7 @@ struct pxa168fb_mach_info silvermoon_lcd_ovly_info __initdata = {
         .enable_lcd             = 1,
         .spi_gpio_cs            = 0,
         .spi_gpio_reset         = 0,
+	.max_fb_size		= 1920*1080*4,
 };
 
 
@@ -830,7 +832,7 @@ static void __init silvermoon_init(void)
 	pxa168_add_freq();
 
 	pxa168_add_fb_ovly(&silvermoon_lcd_ovly_info);
-	pxa168_add_fb(&silvermoon_lcd_info);
+	//pxa168_add_fb(&silvermoon_lcd_info);
 
 #if defined(CONFIG_PXA168_CAMERA) || defined(CONFIG_PXA168_CAMERA_MODULE)
 	pxa168_add_cam();
