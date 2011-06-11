@@ -2209,7 +2209,7 @@ static int do_start_stop(struct fsg_dev *fsg)
 	loej = fsg->cmnd[4] & 0x02;
 	start = fsg->cmnd[4] & 0x01;
 
-#ifdef CONFIG_USB_FILE_STORAGE_TEST
+#if defined(CONFIG_USB_FILE_STORAGE_TEST) || defined(CONFIG_MACH_CHUMBY_SILVERMOON)
 	if ((fsg->cmnd[1] & ~0x01) != 0 ||		// Mask away Immed
 			(fsg->cmnd[4] & ~0x03) != 0) {	// Mask LoEj, Start
 		curlun->sense_data = SS_INVALID_FIELD_IN_CDB;
