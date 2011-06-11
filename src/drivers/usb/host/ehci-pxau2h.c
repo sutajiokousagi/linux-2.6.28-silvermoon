@@ -24,6 +24,11 @@
 #include <linux/clk.h>
 #include <plat/pxa_u2o.h>
 
+#if defined(CONFIG_MACH_CHUMBY_SILVERMOON)
+#include <mach/gpio.h>
+#define USB_WIFI_GPIO 101
+#endif
+
 static struct pxa_usb_plat_info *info;
 
 static int pxau2h_ehci_clk_set(int en)
@@ -147,6 +152,12 @@ static int pxau2h_ehci_probe(struct platform_device *pdev)
 
 	pxau2h_ehci_clk_set(1);
 
+#if defined(CONFIG_MACH_CHUMBY_SILVERMOON)
+          gpio_request(USB_WIFI_GPIO, "Wifi Enable");
+          gpio_direction_output(USB_WIFI_GPIO, 1);
+          gpio_set_value(USB_WIFI_GPIO, 1);
+#endif
+
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "u2h");
 	info->regbase = (unsigned int)ioremap_nocache(res->start, res_size(res));
 	if (!info->regbase) {
@@ -215,6 +226,9 @@ err2:
 err1:
 		dev_err(&pdev->dev, "init %s fail, %d\n", pdev->dev.bus_id, 
 			retval);
+#if defined(CONFIG_MACH_CHUMBY_SILVERMOON)
+	gpio_free(USB_WIFI_GPIO);
+#endif
 	return retval;
 }
 
