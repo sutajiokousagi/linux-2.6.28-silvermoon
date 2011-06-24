@@ -2004,6 +2004,113 @@ static int __init get_ovly_size(char *str)
 }
 __setup("ovly_size=", get_ovly_size);
 
+static struct delayed_work event_work;
+static int work_queued = 0;
+static struct pxa168fb_info *myfbi;
+
+static void hpd_update(struct work_struct *work) {
+  unsigned long temp = atomic_long_read(&(work->data));
+  struct pxa168fb_info *fbi = myfbi;
+  int retval;
+  char *envp[2];
+
+  // trigger a udev event when an attach or detach happens
+  if( __gpio_get_value(91) ? 1 : 0 ) {
+    printk( "got HPD attach event.\n" );
+    envp[0] = "TYPE=ATTACH";
+  } else {
+    printk( "got HPD detach event.\n" );
+    envp[0] = "TYPE=DETACH";
+  }
+  envp[1] = NULL;
+  retval = kobject_uevent_env(&(fbi->dev->kobj), KOBJ_CHANGE, envp);
+  printk( "kobject_uvent_env returned with %d\n", retval );
+
+  work_queued = 0;
+}
+
+static irqreturn_t hpd_isr(int irqno, void *dev_id) {
+  struct pxa168fb_info *fbi = (struct pxa168fb_info *)dev_id;
+
+  if(!work_queued) {
+    work_queued = 1;
+    INIT_DELAYED_WORK(&event_work, hpd_update);
+    myfbi = fbi;
+    schedule_delayed_work(&event_work, 1); // 1 msec to fire
+  }
+
+  return IRQ_HANDLED;
+}
+
+
+static struct delayed_work event_work_hdcp;
+static int work_queued_hdcp = 0;
+
+static void hdcp_update(struct work_struct *work) {
+  unsigned long temp = atomic_long_read(&(work->data));
+  struct pxa168fb_info *fbi = myfbi;
+  int retval;
+  char *envp[2];
+
+  printk( "got HDCP key ready event.\n" );
+  envp[0] = "TYPE=TRIGGER";
+
+  envp[1] = NULL;
+  retval = kobject_uevent_env(&(fbi->dev->kobj), KOBJ_CHANGE, envp);
+  printk( "kobject_uvent_env returned with %d\n", retval );
+
+  work_queued_hdcp = 0;
+}
+
+static irqreturn_t hdcp_isr(int irqno, void *dev_id) {
+  struct pxa168fb_info *fbi = (struct pxa168fb_info *)dev_id;
+
+  if(!work_queued_hdcp) {
+    work_queued_hdcp = 1;
+    INIT_DELAYED_WORK(&event_work_hdcp, hdcp_update);
+    myfbi = fbi;
+    schedule_delayed_work(&event_work_hdcp, 1); // 1 msec to fire
+  }
+
+  return IRQ_HANDLED;
+}
+
+
+
+
+static struct delayed_work event_work_lowvolt;
+static int work_queued_lowvolt = 0;
+
+static void lowvolt_update(struct work_struct *work) {
+  unsigned long temp = atomic_long_read(&(work->data));
+  struct pxa168fb_info *fbi = myfbi;
+  int retval;
+  char *envp[2];
+
+  printk( "got low voltage event.\n" );
+  envp[0] = "TYPE=ALARM";
+
+  envp[1] = NULL;
+  retval = kobject_uevent_env(&(fbi->dev->kobj), KOBJ_CHANGE, envp);
+  printk( "kobject_uvent_env returned with %d\n", retval );
+
+  work_queued_lowvolt = 0;
+}
+
+static irqreturn_t lowvolt_isr(int irqno, void *dev_id) {
+  struct pxa168fb_info *fbi = (struct pxa168fb_info *)dev_id;
+
+  if(!work_queued_lowvolt) {
+    work_queued_lowvolt = 1;
+    INIT_DELAYED_WORK(&event_work_lowvolt, lowvolt_update);
+    myfbi = fbi;
+    schedule_delayed_work(&event_work_lowvolt, 1); // 1 msec to fire
+  }
+
+  return IRQ_HANDLED;
+}
+
+
 static int __init pxa168fb_probe(struct platform_device *pdev)
 {
 	struct pxa168fb_mach_info *mi;
@@ -2220,6 +2327,42 @@ static int __init pxa168fb_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Failed to register pxa168fb: %d\n", ret);
 		ret = -ENXIO;
 		goto failed;
+	}
+
+	////////////////////////////////
+	////// allocate the HDP interrupt
+	gpio_request(91, "HPD report");
+	gpio_direction_input(91);
+	gpio_free(91);
+
+	// allocate the HPD IRQ
+	ret = request_irq(IRQ_GPIO(91), hpd_isr, IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING, "HPD trigger", fbi);
+	if( ret ) {
+	  printk( "Can't allocate IRQ 91 for HPD trigger\n" );
+	}
+
+	////////////////////////////////
+	////// allocate the hdcp interrupt
+	gpio_request(92, "HDCP Aksv ready");
+	gpio_direction_input(92);
+	gpio_free(92);
+
+	// allocate the HPD IRQ
+	ret = request_irq(IRQ_GPIO(92), hdcp_isr, IRQF_TRIGGER_RISING, "HDCP Aksv ready", fbi);
+	if( ret ) {
+	  printk( "Can't allocate IRQ 92 for HDCP trigger\n" );
+	}
+
+	////////////////////////////////
+	////// allocate the low voltage interrupt
+	gpio_request(93, "Low voltage emergency");
+	gpio_direction_input(93);
+	gpio_free(93);
+
+	// allocate the HPD IRQ
+	ret = request_irq(IRQ_GPIO(93), lowvolt_isr, IRQF_TRIGGER_RISING, "Low voltage emergency", fbi);
+	if( ret ) {
+	  printk( "Can't allocate IRQ 93 for low voltage interrupt\n" );
 	}
 
 	/*
