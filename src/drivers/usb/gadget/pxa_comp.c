@@ -388,7 +388,7 @@ stop_activity(struct usb_gadget *gadget, struct gadget_driver_info *p_info)
 	if (driver)
 		driver->disconnect(gadget);
 #else
-	if (!p_info->stopped)
+	if (p_info->driver)
 		p_info->driver->disconnect(gadget);
 	p_info->stopped = 1;
 #endif
