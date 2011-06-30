@@ -434,7 +434,7 @@ static void silvermoon_lcd_power(struct pxa168fb_info *fbi, unsigned int spi_gpi
 #define     CFG_SPI_3W4WB(wire)                 (wire<<1)  /* 1: 3-wire; 0: 4-wire */
 
 
-#if defined(CONFIG_CIR)
+#if defined(CONFIG_CIR) || defined(CONFIG_CIR_MODULE)
 
 static struct resource pxa168_resource_cir[] = {
 	[0] = {
@@ -838,7 +838,7 @@ static void __init silvermoon_init(void)
 	pxa168_add_cam();
 #endif
 
-#if defined(CONFIG_CIR)
+#if defined(CONFIG_CIR) || defined(CONFIG_CIR_MODULE)
         pxa168_cir_init(); /*init the gpio */
 #endif
 

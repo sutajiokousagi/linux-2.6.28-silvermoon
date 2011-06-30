@@ -29,6 +29,7 @@
 #include <asm/irq.h>
 #include <asm/gpio.h>
 
+MODULE_LICENSE("GPL");
 
 /* Only and only one XXX_READOUT_IRCBUFFER can be defined */
 #define MARVELL_READOUT_IRCBUFFER
@@ -142,31 +143,37 @@ static unsigned int end = 0, i=0;
  */
 static void analyseword (int word)
 {
-/* printk(KERN_DEBUG  "%x\n", word); */
-if ((word << CODE_SIZE) == (CUSTOM_CODE << CODE_SIZE) && !dont_send_more) {
-	if ((word & 0xff000000)==(~(word << 8) & 0xff000000)){
-	 	ir_key = MV_IR_KEY_NULL;
-		i = 0;
+	if ((word << CODE_SIZE) == (CUSTOM_CODE << CODE_SIZE) && !dont_send_more) {
+		if ((word & 0xff000000)==(~(word << 8) & 0xff000000)) {
+			ir_key = MV_IR_KEY_NULL;
+			i = 0;
 	/* check for the key */
-		while (ir_key_table[i].ir_key != MV_IR_KEY_NULL) {
-			if ((ir_key_table[i].ir_encode) == ((word & 0xff0000)
-				>> CODE_SIZE)) {
-				ir_key = ir_key_table[i].ir_key;
-/*				printk(KERN_INFO "The key %d was found\n",ir_key); */
-				input_report_key(cir_input_dev, ir_key , 1);
-				input_report_key(cir_input_dev, ir_key , 0);
-				cb_start = cb_end;
-				dont_send_more = 1;
-				break;
-			}
+			while (ir_key_table[i].ir_key != MV_IR_KEY_NULL) {
+				if ((ir_key_table[i].ir_encode) == ((word & 0xff0000)
+					>> CODE_SIZE)) {
+					ir_key = ir_key_table[i].ir_key;
+	/*				printk(KERN_INFO "The key %d was found\n",ir_key); */
+					input_report_key(cir_input_dev, ir_key , 1);
+					input_report_key(cir_input_dev, ir_key , 0);
+					cb_start = cb_end;
+					dont_send_more = 1;
+					break;
+				}
 
-		i++;
+				i++;
+			}
+			if (ir_key == MV_IR_KEY_NULL) {
+				printk(">>> Unable to find matching key for %x\n", word);
+			}
+			else {
+				printk(">>> Found matching key! %d\n", ir_key);
+			}
+			/* key not found, just noises */
 		}
-	/* key not found, just noises */
 	}
-}
-else { uart_putc('N');
-}
+	else {
+		uart_putc('N');
+	}
 }
 static void clear_ircbuffer (void)
 {
@@ -183,10 +190,10 @@ static void clear_ircbuffer (void)
 				count_word++;
 			}
 			if (count_word == word_size) {
-			analyseword (word);
-			count_word = 0;
-			preamble = 0;
-			word = 0;
+				analyseword (word);
+				count_word = 0;
+				preamble = 0;
+				word = 0;
 			}
 			continue;
 		}
@@ -197,10 +204,10 @@ static void clear_ircbuffer (void)
 				count_word++;
 			}
 			if (count_word == word_size) {
-			analyseword (word);
-			count_word = 0;
-			preamble = 0;
-			word = 0;
+				analyseword (word);
+				count_word = 0;
+				preamble = 0;
+				word = 0;
 			}
 			continue;
 		}
@@ -264,22 +271,26 @@ DECLARE_TASKLET(clearbuf, readout_ircbuffer, 0);
 static irqreturn_t cir_interrupt(int irq, void *dev_id)
 {
 	unsigned int event_len;
+	static unsigned int this, prev;
 
-		/*
-	 	 *
-	   	 * Calculate the length of the event 
-	 	 *
-	 	 */
-		len_time.base = len_time.jiff;
-		len_time.jiff = timer_services_counter_read(COUNTER_0) /
-		 	calibration_n; 
-		event_len = (len_time.jiff > len_time.base) ?
-			 (len_time.jiff - len_time.base) : (len_time.jiff +
-			 0xffffffff - len_time.base);
-		store_ircbuffer(event_len);
-		if (event_len > (END_MIN/1000)) {
+	prev = this;
+	this = timer_services_counter_read(COUNTER_0);
+	printk("Event length: %d units\n", this-prev);
+
+	/*
+ 	 *
+   	 * Calculate the length of the event 
+ 	 *
+ 	 */
+	len_time.base = len_time.jiff;
+	len_time.jiff = timer_services_counter_read(COUNTER_0) / calibration_n; 
+	event_len = (len_time.jiff > len_time.base) ?
+		 (len_time.jiff - len_time.base) : (len_time.jiff +
+		 0xffffffff - len_time.base);
+	store_ircbuffer(event_len);
+	if (event_len > (END_MIN/1000)) {
 		tasklet_schedule(&clearbuf);
-		}
+	}
 	return 0;
 }
 
@@ -317,15 +328,13 @@ EXPORT_SYMBOL(cir_disable);
 
 static int cir_suspend(struct platform_device *pdev, pm_message_t state)
 {
-
-/* require timer services can be disabled */
+	/* require timer services can be disabled */
 	return 0;
 }
 
 static int cir_resume(struct platform_device *pdev)
 {
 	/* require timer services resume to be enabled */
-
 	return 0;
 }
 #else
@@ -335,7 +344,6 @@ static int cir_resume(struct platform_device *pdev)
 
 static int __devinit cir_probe(struct platform_device *pdev)
 {
-
 	struct cir_device *cir;
 	struct resource *res;
 	int ret = 0;
@@ -356,9 +364,10 @@ static int __devinit cir_probe(struct platform_device *pdev)
 	if (res == NULL) {
 		dev_err(&pdev->dev,"no memory resource defined\n");
 		ret = -ENODEV;
-		}
+	}
+
 	cir->mmio_base = ioremap_nocache(res->start, SZ_256);
-	printk(KERN_DEBUG "cir->address 0x%p", cir->mmio_base);
+	dev_dbg(&pdev->dev, "cir->address 0x%p", cir->mmio_base);
 	res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
 	if (res == NULL) {
 		dev_err(&pdev->dev, "no memory resource defined\n");
@@ -366,7 +375,7 @@ static int __devinit cir_probe(struct platform_device *pdev)
 	}
 	
 	cir->irq = platform_get_irq(pdev, 0);
-	printk(KERN_DEBUG "cir->irq : %d \n", cir->irq);
+	dev_dbg(&pdev->dev, "cir->irq : %d \n", cir->irq);
 	if (cir->irq < 0) {
 		dev_err(&pdev->dev, "no IRQ resource defined\n");
 		ret = -ENODEV;
@@ -374,14 +383,14 @@ static int __devinit cir_probe(struct platform_device *pdev)
 	}
 	
 	ir_pin = IRQ_TO_GPIO(cir->irq);
-	ret = request_irq(cir->irq ,cir_interrupt ,IRQF_TRIGGER_FALLING ,"CIR"
-		,cir);
-	printk(KERN_DEBUG "ret from request irq. %d\n", ret);
-	printk(KERN_DEBUG "the is set to irq. %d\n", cir->irq);
-   	if (ret)goto
-		err_free_io;
+	ret = request_irq(cir->irq, cir_interrupt, IRQF_TRIGGER_FALLING, "CIR", cir);
+	dev_dbg(&pdev->dev, "ret from request irq. %d\n", ret);
+	dev_dbg(&pdev->dev, "the is set to irq. %d\n", cir->irq);
+   	if (ret)
+		goto err_free_io;
 	platform_set_drvdata(pdev, cir);
-	printk(KERN_DEBUG " Initialize CIR driver completed \n");
+	dev_dbg(&pdev->dev, " Initialize CIR driver completed \n");
+
 	/* setup input device */
 	cir_input_dev->name = "aspenite_cir";
 	cir_input_dev->phys = "aspenite_cir/input2";
@@ -396,15 +405,18 @@ static int __devinit cir_probe(struct platform_device *pdev)
 		set_bit(ir_key, cir_input_dev->keybit);
 		i++;
 	}
-	printk(KERN_DEBUG " key map was set \n");
+	dev_dbg(&pdev->dev, " key map was set \n");
+
 	/* Register with the input subsystem */
 	if (input_register_device(cir_input_dev)) 
-		printk(KERN_DEBUG "can't register CIR_input Driver.\n");
-	printk(KERN_DEBUG "CIR_input Driver Initialized.\n");
+		dev_dbg(&pdev->dev, "can't register CIR_input Driver.\n");
+	dev_dbg(&pdev->dev, "CIR_input Driver Initialized.\n");
 
 	return 0;
 	
 err_free_io:
+	if (cir->irq > 0)
+		free_irq(cir->irq, cir);
 	return ret;
 }
 
@@ -415,6 +427,9 @@ static int __devexit cir_remove(struct platform_device *pdev)
 	cir = platform_get_drvdata(pdev);
 	if (cir == NULL)
 		return -ENODEV;
+
+	if (cir->irq > 0)
+		free_irq(cir->irq, cir);
 	kfree(cir);
 	return 0;
 }
@@ -449,7 +464,7 @@ int __init cir_init(struct cir_dev *dev)
 		return -EIO;
 	}
 
-/* Direction is input */
+	/* Direction is input */
 	gpio_direction_input(IR_PIN);
 	return 0;
 }
@@ -467,12 +482,13 @@ void cir_exit(struct cir_dev *dev)
 
 	cir_disable(dev);
 	
-/* Unregister from the input subsystem */
+	/* Unregister from the input subsystem */
 	input_unregister_device(cir_input_dev);
 
-/* Unregister driver */
+	/* Unregister driver */
 	platform_device_unregister(cir_dev_in);
-return;
+
+	return;
 }
 
 static int __init aspenite_cir_init(void)
@@ -480,8 +496,7 @@ static int __init aspenite_cir_init(void)
 	int ret = 0;
 	ret = platform_driver_register(&aspenite_cir_driver);
 	if (ret) {
-		printk(KERN_DEBUG   KERN_ERR "failed to register \
-			 aspenite_cir_driver");
+		printk(KERN_ERR "failed to register aspenite_cir_driver");
 		return ret;
 	}
 	return ret;
