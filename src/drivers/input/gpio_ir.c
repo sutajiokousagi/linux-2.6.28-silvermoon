@@ -358,22 +358,18 @@ static int __devinit cir_probe(struct platform_device *pdev)
 	if (!cir_input_dev) {
 		return -ENOMEM;
 	}
-
 	cir->input_dev = cir_input_dev;
+
+	/* Allocate GPIO memory range */
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (res == NULL) {
 		dev_err(&pdev->dev,"no memory resource defined\n");
 		ret = -ENODEV;
 	}
-
 	cir->mmio_base = ioremap_nocache(res->start, SZ_256);
 	dev_dbg(&pdev->dev, "cir->address 0x%p", cir->mmio_base);
-	res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
-	if (res == NULL) {
-		dev_err(&pdev->dev, "no memory resource defined\n");
-		ret = -ENODEV;
-	}
-	
+
+	/* Allocate GPIO IRQ */
 	cir->irq = platform_get_irq(pdev, 0);
 	dev_dbg(&pdev->dev, "cir->irq : %d \n", cir->irq);
 	if (cir->irq < 0) {
@@ -381,13 +377,12 @@ static int __devinit cir_probe(struct platform_device *pdev)
 		ret = -ENODEV;
 		goto err_free_io;
 	}
-	
 	ir_pin = IRQ_TO_GPIO(cir->irq);
-	ret = request_irq(cir->irq, cir_interrupt, IRQF_TRIGGER_FALLING, "CIR", cir);
+	ret = request_irq(cir->irq, cir_interrupt, IRQF_TRIGGER_FALLING, "GPIO IR", cir);
 	dev_dbg(&pdev->dev, "ret from request irq. %d\n", ret);
-	dev_dbg(&pdev->dev, "the is set to irq. %d\n", cir->irq);
    	if (ret)
 		goto err_free_io;
+
 	platform_set_drvdata(pdev, cir);
 	dev_dbg(&pdev->dev, " Initialize CIR driver completed \n");
 
@@ -430,6 +425,7 @@ static int __devexit cir_remove(struct platform_device *pdev)
 
 	if (cir->irq > 0)
 		free_irq(cir->irq, cir);
+
 	kfree(cir);
 	return 0;
 }
