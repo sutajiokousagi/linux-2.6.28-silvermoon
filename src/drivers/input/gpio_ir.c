@@ -18,6 +18,7 @@
 #include <linux/jiffies.h>
 #include <linux/kernel.h>
 #include <linux/input.h>
+#include <linux/irq.h>
 
 #include <mach/gpio_ir.h>
 #include <mach/ir_key_def.h>
@@ -56,20 +57,18 @@ MODULE_LICENSE("GPL");
 #define word_size 	32     	/*word size according to the protocol */
 #define calibration_n 	2167    /* timer resolution eq=1500 OS timer HZ */
 
-struct input_dev *cir_input_dev; /* Representation of an input device */
-static struct platform_device *cir_dev_in; /* Device structure */
+
+#define IR_SHIFT(x)     (x % (sizeof(int) * 8)) /* Shift6*/
+#define GPIO_BIT(x)     (1 << ((x) & 0x1f))
 
 /*
  * Circular buffer
  */
 #define CIRC_BUFF_MASK 0x3ff
 #define CIRC_BUFF_LENGTH 0x400
-unsigned int cbuffer[CIRC_BUFF_LENGTH];
-unsigned int cb_start=0, cb_end=0;
-int ir_pin;
+static unsigned int cbuffer[CIRC_BUFF_LENGTH];
+static unsigned int cb_start=0, cb_end=0;
 
-
-unsigned int ir_code_bit = 0;
 
 /*
  * Table of IR-signal-code and key
@@ -141,7 +140,7 @@ static unsigned int end = 0, i=0;
  *Analyse the address and key
  *
  */
-static void analyseword (int word)
+static void analyseword (struct cir_device *cir, int word)
 {
 	if ((word << CODE_SIZE) == (CUSTOM_CODE << CODE_SIZE) && !dont_send_more) {
 		if ((word & 0xff000000)==(~(word << 8) & 0xff000000)) {
@@ -153,8 +152,8 @@ static void analyseword (int word)
 					>> CODE_SIZE)) {
 					ir_key = ir_key_table[i].ir_key;
 	/*				printk(KERN_INFO "The key %d was found\n",ir_key); */
-					input_report_key(cir_input_dev, ir_key , 1);
-					input_report_key(cir_input_dev, ir_key , 0);
+					input_report_key(cir->input_dev, ir_key , 1);
+					input_report_key(cir->input_dev, ir_key , 0);
 					cb_start = cb_end;
 					dont_send_more = 1;
 					break;
@@ -175,7 +174,7 @@ static void analyseword (int word)
 		uart_putc('N');
 	}
 }
-static void clear_ircbuffer (void)
+static void clear_ircbuffer (struct cir_device *cir)
 {
 	unsigned int event_len;
 
@@ -190,7 +189,7 @@ static void clear_ircbuffer (void)
 				count_word++;
 			}
 			if (count_word == word_size) {
-				analyseword (word);
+				analyseword (cir, word);
 				count_word = 0;
 				preamble = 0;
 				word = 0;
@@ -204,7 +203,7 @@ static void clear_ircbuffer (void)
 				count_word++;
 			}
 			if (count_word == word_size) {
-				analyseword (word);
+				analyseword (cir, word);
 				count_word = 0;
 				preamble = 0;
 				word = 0;
@@ -228,36 +227,22 @@ static void clear_ircbuffer (void)
 			continue;
 		}
 	}
-
 }
+
 /*
  * This function should be called in an independent thread.
  * It reads out bit-wised code.
  */
 void readout_ircbuffer(unsigned long nodata)
 {
-	clear_ircbuffer();
-	return;
-}
-
-/*
- * Store the event length
- */
-static void store_ircbuffer(unsigned int event_len)
-{
-	cbuffer[cb_end] = event_len;
-	cb_end++;
-	cb_end &= CIRC_BUFF_MASK;
-
-	/*
-	 * if cb_start is equal to cb_end, there's no new data in the cbuffer.
-	 * Therefore, we have to avoid that, because we're writing a new data.
-	 *
-	 */
-	if (cb_end == cb_start) {
-		cb_start++;
-		cb_start &= CIRC_BUFF_MASK;
+	int event_count = 0;
+	while (cb_start != cb_end) {
+		event_count++;
+		printk("Event %ld ticks long: %d\n", cbuffer[cb_start] & 0x7fffffffL, cbuffer[cb_start] >> 31);
+		cb_start = (cb_start+1) & CIRC_BUFF_MASK;
 	}
+	printk("Read out %d events\n", event_count);
+	return;
 }
 
 void cir_free(struct cir_device *cir)
@@ -270,13 +255,25 @@ DECLARE_TASKLET(clearbuf, readout_ircbuffer, 0);
 
 static irqreturn_t cir_interrupt(int irq, void *dev_id)
 {
+	struct cir_device *cir = (struct cir_device *)dev_id;
 	unsigned int event_len;
-	static unsigned int this, prev;
+	static unsigned long this, prev;
 
 	prev = this;
 	this = timer_services_counter_read(COUNTER_0);
-	printk("Event length: %d units\n", this-prev);
+	event_len = (this - prev) & 0x7fffffff;
+	if (__raw_readl(cir->mmio_base + 0x00) & 0x40);
+		event_len |= 0x80000000L;
 
+	cbuffer[cb_end] = event_len;
+	cb_end = (cb_end+1) & CIRC_BUFF_MASK;
+
+	if (cb_end == cb_start)
+		cb_start = (cb_start+1) & CIRC_BUFF_MASK;
+
+	tasklet_schedule(&clearbuf);
+
+#if 0
 	/*
  	 *
    	 * Calculate the length of the event 
@@ -289,9 +286,11 @@ static irqreturn_t cir_interrupt(int irq, void *dev_id)
 		 0xffffffff - len_time.base);
 	store_ircbuffer(event_len);
 	if (event_len > (END_MIN/1000)) {
+		clearbuf.data = (unsigned long)dev_id;
 		tasklet_schedule(&clearbuf);
 	}
-	return 0;
+#endif
+	return IRQ_HANDLED;
 }
 
 /**
@@ -302,7 +301,9 @@ static irqreturn_t cir_interrupt(int irq, void *dev_id)
 void cir_enable(struct cir_dev *dev)
 {
 	struct cir_device *cir = dev->cir;
-	__raw_writel(GPIO_BIT(IR_SHIFT), cir->mmio_base + GAPMASK0);
+	__raw_writel(GPIO_BIT(IR_SHIFT(cir->pin)), cir->mmio_base + GAPMASK0);
+	__raw_writel(GPIO_BIT(IR_SHIFT(cir->pin)), cir->mmio_base + GSFER0);
+	__raw_writel(GPIO_BIT(IR_SHIFT(cir->pin)), cir->mmio_base + GSRER0);
 }
 
 EXPORT_SYMBOL(cir_enable);
@@ -316,7 +317,7 @@ void cir_disable(struct cir_dev *dev)
 {
 	struct cir_device *cir = dev->cir;
 
-	__raw_writel(GPIO_BIT(IR_SHIFT), cir->mmio_base + GCPMASK0);
+	__raw_writel(GPIO_BIT(IR_SHIFT(cir->pin)), cir->mmio_base + GCPMASK0);
 }
 
 EXPORT_SYMBOL(cir_disable);
@@ -347,6 +348,7 @@ static int __devinit cir_probe(struct platform_device *pdev)
 	struct cir_device *cir;
 	struct resource *res;
 	int ret = 0;
+
    	cir = kzalloc(sizeof(struct cir_device), GFP_KERNEL);
    	if (cir == NULL) {
       		dev_err(&pdev->dev, "failed to allocate memory\n");
@@ -354,22 +356,24 @@ static int __devinit cir_probe(struct platform_device *pdev)
    	}
 	
 	/* Allocate an input device data structure */
-	cir_input_dev = input_allocate_device();
-	if (!cir_input_dev) {
+	cir->input_dev = input_allocate_device();
+	if (!cir->input_dev) {
+		kfree(cir);
 		return -ENOMEM;
 	}
-	cir->input_dev = cir_input_dev;
 
 	/* Allocate GPIO memory range */
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (res == NULL) {
 		dev_err(&pdev->dev,"no memory resource defined\n");
+		input_free_device(cir->input_dev);
+		kfree(cir);
 		ret = -ENODEV;
 	}
 	cir->mmio_base = ioremap_nocache(res->start, SZ_256);
 	dev_dbg(&pdev->dev, "cir->address 0x%p", cir->mmio_base);
 
-	/* Allocate GPIO IRQ */
+	/* Figure out which GPIO IRQ to use */
 	cir->irq = platform_get_irq(pdev, 0);
 	dev_dbg(&pdev->dev, "cir->irq : %d \n", cir->irq);
 	if (cir->irq < 0) {
@@ -377,41 +381,52 @@ static int __devinit cir_probe(struct platform_device *pdev)
 		ret = -ENODEV;
 		goto err_free_io;
 	}
-	ir_pin = IRQ_TO_GPIO(cir->irq);
-	ret = request_irq(cir->irq, cir_interrupt, IRQF_TRIGGER_FALLING, "GPIO IR", cir);
+
+	/* Actually set up the IRQ */
+	ret = request_irq(cir->irq, cir_interrupt,
+			  IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING,
+			  "IR port", cir);
 	dev_dbg(&pdev->dev, "ret from request irq. %d\n", ret);
-   	if (ret)
+   	if (ret) {
+		dev_err(&pdev->dev, "Unable to request IRQ: %d\n", ret);
 		goto err_free_io;
+	}
+
+	cir->pin = IRQ_TO_GPIO(cir->irq);
 
 	platform_set_drvdata(pdev, cir);
 	dev_dbg(&pdev->dev, " Initialize CIR driver completed \n");
 
 	/* setup input device */
-	cir_input_dev->name = "aspenite_cir";
-	cir_input_dev->phys = "aspenite_cir/input2";
-	cir_input_dev->dev.parent = &pdev->dev;
+	cir->input_dev->name = "aspenite_cir";
+	cir->input_dev->phys = "aspenite_cir/input2";
+	cir->input_dev->dev.parent = &pdev->dev;
+	cir->input_dev->evbit[0] = BIT(EV_KEY);
 	cir->pdev = pdev->dev.platform_data;
-	cir_input_dev->evbit[0] = BIT(EV_KEY);
 
 	/* Announce that the CIR will generate  key map */
 	ir_key = MV_IR_KEY_NULL;
 	for (i=0; i< 33;) {
 		ir_key = ir_key_table[i].ir_key;
-		set_bit(ir_key, cir_input_dev->keybit);
+		set_bit(ir_key, cir->input_dev->keybit);
 		i++;
 	}
 	dev_dbg(&pdev->dev, " key map was set \n");
 
 	/* Register with the input subsystem */
-	if (input_register_device(cir_input_dev)) 
+	if (input_register_device(cir->input_dev)) 
 		dev_dbg(&pdev->dev, "can't register CIR_input Driver.\n");
 	dev_dbg(&pdev->dev, "CIR_input Driver Initialized.\n");
 
 	return 0;
 	
 err_free_io:
-	if (cir->irq > 0)
+	if (cir && cir->irq > 0)
 		free_irq(cir->irq, cir);
+	if (cir && cir->input_dev)
+		input_free_device(cir->input_dev);
+	if (cir)
+		kfree(cir);
 	return ret;
 }
 
@@ -425,6 +440,9 @@ static int __devexit cir_remove(struct platform_device *pdev)
 
 	if (cir->irq > 0)
 		free_irq(cir->irq, cir);
+
+	if (cir->input_dev)
+		input_unregister_device(cir->input_dev);
 
 	kfree(cir);
 	return 0;
@@ -454,38 +472,17 @@ static struct platform_driver aspenite_cir_driver = {
 
 int __init cir_init(struct cir_dev *dev)
 {
-	if (gpio_request(IR_PIN, "IR_PIN")) {
+	if (gpio_request(dev->cir->pin, "IR_PIN")) {
 		printk(KERN_ERR "Request GPIO failed,"
-				"gpio: %d \n", IR_PIN);
+				"gpio: %d \n", dev->cir->pin);
 		return -EIO;
 	}
 
 	/* Direction is input */
-	gpio_direction_input(IR_PIN);
+	gpio_direction_input(dev->cir->pin);
 	return 0;
 }
 
-
-/**
- * cir_exit
- *
- * exit cir driver.
- *
- */
-
-void cir_exit(struct cir_dev *dev)
-{
-
-	cir_disable(dev);
-	
-	/* Unregister from the input subsystem */
-	input_unregister_device(cir_input_dev);
-
-	/* Unregister driver */
-	platform_device_unregister(cir_dev_in);
-
-	return;
-}
 
 static int __init aspenite_cir_init(void)
 {
