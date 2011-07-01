@@ -23,6 +23,7 @@
 #include <linux/card.h>
 #include <linux/mtd/nand.h>
 #include <linux/mtd/partitions.h>
+#include <linux/gpio_keys.h>
 #include <linux/delay.h>
 #include <linux/usb.h>
 #include <linux/usb/otg.h>
@@ -242,8 +243,8 @@ static unsigned long silvermoon_pin_config[] __initdata = {
 	CSM_GPIO121_TS_MOSI, // fpga_din (output)
  	MFP_CFG(GPIO97, AF0), // fpga_done (input)
 
-	// Bend sensor detect
-	CSM_GPIO89_CHUMBY_BEND,
+	// Recovery button
+	MFP_CFG(GPIO89, AF0),
 
 	// Headphone presence detect
 	// CSM_GPIO97_HP_IN,
@@ -737,10 +738,35 @@ struct platform_device silvermoon_bl_device = {
 };
 
 
+
+static struct gpio_keys_button gpio_keys_button[] = {
+	[0] = {
+		.desc   = "recovery",
+		.code   = KEY_VENDOR,
+		.type   = EV_KEY,
+		.gpio   = 89,
+	},
+};
+
+static struct gpio_keys_platform_data silvermoon_gpio_keys = {
+	.buttons        = gpio_keys_button,
+	.nbuttons       = 1,
+};
+
+static struct platform_device netv_gpio_keys_device = {
+	.name           = "gpio-keys",
+	.id             = -1,
+	.dev            = {
+		.platform_data  = &silvermoon_gpio_keys,
+	},
+};
+
+
+
 static void __init silvermoon_init(void)
 {
 	int gpio_109 = 109;
-    CHLOG("Just so you know, the CPU type is 0x%08x\n", read_cpuid_id());
+	int ret;
 
 	mfp_config(ARRAY_AND_SIZE(silvermoon_pin_config));
 
@@ -769,8 +795,6 @@ static void __init silvermoon_init(void)
 
 	/* on-chip devices */
 	pxa168_add_uart(1);
-	// Used for cryptoprocessor
-	pxa168_add_uart(3);
 
 	//turn on the I2C bus for the audio codec (and others)
 	pxa168_add_twsi(0, &xi2c_info, ARRAY_AND_SIZE(xi2c_board_info));
@@ -845,6 +869,11 @@ static void __init silvermoon_init(void)
 	platform_device_register(&silvermoon_bl_device);
 
 	platform_device_register(&pxa910_device_rtc);
+
+	ret = platform_device_register(&netv_gpio_keys_device);
+        if (ret)
+                dev_err(&netv_gpio_keys_device.dev,
+                        "unable to register gpio keys: %d\n", ret);
 }
 
 MACHINE_START(CHUMBY_SILVERMOON, "PXA168-based Chumby Silvermoon platform")
@@ -868,6 +897,7 @@ EXPORT_SYMBOL(chumby_brand);
 static int __init chumbybrand_setup(char *str)
 {
 	global_chumbybrand = simple_strtoul(str, NULL, 0);
+	return 0;
 }
 __setup("brandnum=", chumbybrand_setup);
 
