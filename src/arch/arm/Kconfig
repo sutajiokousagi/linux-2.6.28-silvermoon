@@ -473,6 +473,7 @@ config ARCH_MMP
 	select GENERIC_CLOCKEVENTS
 	select TICK_ONESHOT
 	select PLAT_PXA
+	select FIQ
 	help
 	  Support for Marvell's PXA168 processor line.
 

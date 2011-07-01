@@ -17,8 +17,10 @@
 #include <linux/io.h>
 #include <linux/sysdev.h>
 #include <linux/bootmem.h>
+#include <linux/list.h>
 
 #include <mach/gpio.h>
+#include <mach/timer_services.h>
 
 int pxa_last_gpio;
 
@@ -201,11 +203,13 @@ static void pxa_gpio_demux_handler(unsigned int irq, struct irq_desc *desc)
 		for_each_gpio_chip(gpio, c) {
 			gpio_base = c->chip.base;
 
+			/* Acknowledge the interrupts */
 			gedr = __raw_readl(c->regbase + GEDR_OFFSET);
 			gedr = gedr & c->irq_mask;
 			__raw_writel(gedr, c->regbase + GEDR_OFFSET);
 
 			n = find_first_bit(&gedr, BITS_PER_LONG);
+			gedr = __raw_readl(c->regbase + GEDR_OFFSET);
 			while (n < BITS_PER_LONG) {
 				loop = 1;
 

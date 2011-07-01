@@ -1,6 +1,8 @@
 #ifndef __ASM_MACH_IRQS_H
 #define __ASM_MACH_IRQS_H
 
+#define FIQ_START 0
+
 /*
  * Interrupt numbers for PXA168
  */
