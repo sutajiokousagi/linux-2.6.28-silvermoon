@@ -43,13 +43,16 @@ typedef struct {
 	unsigned int ir_key;
 } ir_key_table_t;
 
+struct lirc_driver;
+
 struct cir_device {
-	struct platform_device *pdev;
-	struct input_dev *input_dev;
-	void __iomem	*mmio_base;
-	unsigned long	phys_base;
-	int		irq;
-	int		pin;
+	struct platform_device	*pdev;
+	struct lirc_driver	*lirc_driver;
+	struct input_dev	*input_dev;
+	void __iomem		*mmio_base;
+	unsigned long		 phys_base;
+	int			 irq;
+	int			 pin;
 };
 
 struct cir_dev {
