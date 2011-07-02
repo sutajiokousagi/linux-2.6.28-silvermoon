@@ -491,32 +491,27 @@ struct pxa168fb_mach_info silvermoon_lcd_info __initdata = {
 };
 
 struct pxa168fb_mach_info silvermoon_lcd_ovly_info __initdata = {
-        .id                     = "Ovly-silvermoon",
-        .modes                  = video_modes_aspen,
-        .num_modes              = ARRAY_SIZE(video_modes_aspen),
-        //.pix_fmt                = PIX_FMT_RGBA888,
-        .pix_fmt                = PIX_FMT_RGB565,
-        .io_pin_allocation_mode = PIN_MODE_DUMB_18_GPIO | 0x20, // No crossing 1K boundary
-	.dumb_mode              = DUMB_MODE_RGB666,	// LCD_SPU_DUMB_CTRL[31:28]
-        .active                 = 1,
-        //.spi_ctrl               = CFG_SCLKCNT(2) | CFG_TXBITS(15) | CFG_SPI_SEL(1) | CFG_SPI_3W4WB(1) | CFG_SPI_ENA(1),
-        //.spi_gpio_cs            = 0 /*GPIO_EXT1(14)*/,
-        //.spi_gpio_reset         = -1,
-        .pxa168fb_lcd_power     = silvermoon_lcd_power,
-        .gpio_output_data       = 0x10,	// LCD_SPU_DUMB_CTRL[27:20]
-        .gpio_output_mask       = 0xff,	// LCD_SPU_DUMB_CTRL[19:12]
-        .invert_pixclock        = 1,
-        .invert_vsync           = 1,
-        .invert_hsync           = 1,
-// New to 2.6.28 bsp
-		.sclk_clock             = LCD_SCLK,
-		.panel_rgb_reverse_lanes= 0,
-        .invert_composite_blank = 0,
-        .invert_pix_val_ena     = 0,
-        .panel_rbswap           = 0,
-        .enable_lcd             = 1,
-        .spi_gpio_cs            = 0,
-        .spi_gpio_reset         = 0,
+	.id                     = "Ovly-silvermoon",
+	.modes                  = video_modes_aspen,
+	.num_modes              = ARRAY_SIZE(video_modes_aspen),
+	.pix_fmt                = PIX_FMT_RGB565,
+	.io_pin_allocation_mode = PIN_MODE_DUMB_18_GPIO | 0x20, // No crossing 1K boundary
+	.dumb_mode              = DUMB_MODE_RGB666,
+	.active                 = 1,
+	.pxa168fb_lcd_power     = silvermoon_lcd_power,
+	.gpio_output_data       = 0x10,	// LCD_SPU_DUMB_CTRL[27:20]
+	.gpio_output_mask       = 0xff,	// LCD_SPU_DUMB_CTRL[19:12]
+	.invert_pixclock        = 1,
+	.invert_vsync           = 1,
+	.invert_hsync           = 1,
+	.sclk_clock             = LCD_SCLK,
+	.panel_rgb_reverse_lanes= 0,
+	.invert_composite_blank = 0,
+	.invert_pix_val_ena     = 0,
+	.panel_rbswap           = 0,
+	.enable_lcd             = 1,
+	.spi_gpio_cs            = 0,
+	.spi_gpio_reset         = 0,
 	.max_fb_size		= 1920*1080*4,
 };
 
