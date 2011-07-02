@@ -249,7 +249,7 @@ struct _sCursorConfig {
 #define DUMB_MODE_RGB888		6
 
 /* default fb buffer size 800x600, double-buffered, 32-bits */
-#define DEFAULT_FB_SIZE	(1280 * 720 * 4 * 2)
+#define DEFAULT_FB_SIZE	(1920 * 1080 * 4)
 
 
 /*
