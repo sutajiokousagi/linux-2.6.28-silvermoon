@@ -745,6 +745,7 @@ static struct gpio_keys_button gpio_keys_button[] = {
 		.code   = KEY_VENDOR,
 		.type   = EV_KEY,
 		.gpio   = 89,
+		.debounce_interval = 3, /* ms */
 	},
 };
 
