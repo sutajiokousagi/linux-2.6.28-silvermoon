@@ -2167,6 +2167,7 @@ static int __init pxa168fb_probe(struct platform_device *pdev)
 	fi->fix.accel = FB_ACCEL_NONE;
 	fi->fbops = &pxa168fb_ops;
 	fi->pseudo_palette = fbi->pseudo_palette;
+	fi->dev = fbi->dev;
 
 	/*
 	 * Map LCD controller registers.
