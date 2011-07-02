@@ -136,6 +136,7 @@ static unsigned int word = 0, dont_send_more=0 , count_word = 0 , preamble = 0;
 static unsigned int end = 0, i=0;
 
 
+
 /*
  *Analyse the address and key
  *
@@ -233,63 +234,37 @@ static void clear_ircbuffer (struct cir_device *cir)
  * This function should be called in an independent thread.
  * It reads out bit-wised code.
  */
-void readout_ircbuffer(unsigned long nodata)
+static void process_times(unsigned long nodata)
 {
 	int event_count = 0;
 	while (cb_start != cb_end) {
 		event_count++;
-		printk("Event %ld ticks long: %d\n", cbuffer[cb_start] & 0x7fffffffL, cbuffer[cb_start] >> 31);
+		printk("Event %ld ticks long: %d\n", (cbuffer[cb_start] & ~0x80000000L), cbuffer[cb_start] >> 31);
 		cb_start = (cb_start+1) & CIRC_BUFF_MASK;
 	}
 	printk("Read out %d events\n", event_count);
 	return;
 }
 
-void cir_free(struct cir_device *cir)
-{
-/*free IRQ */
-}
-EXPORT_SYMBOL(cir_free);
+DEFINE_TIMER(process_time_timer, process_times, 0, 0);
 
-DECLARE_TASKLET(clearbuf, readout_ircbuffer, 0);
 
 static irqreturn_t cir_interrupt(int irq, void *dev_id)
 {
 	struct cir_device *cir = (struct cir_device *)dev_id;
-	unsigned int event_len;
 	static unsigned long this, prev;
 
 	prev = this;
 	this = timer_services_counter_read(COUNTER_0);
-	event_len = (this - prev) & 0x7fffffff;
-	if (__raw_readl(cir->mmio_base + 0x00) & 0x40);
-		event_len |= 0x80000000L;
+	cbuffer[cb_end] = ((this - prev) & 0x7fffffffL)
+		 	| ((__raw_readl(cir->mmio_base + 0x00) & 0x40) << 25);
 
-	cbuffer[cb_end] = event_len;
 	cb_end = (cb_end+1) & CIRC_BUFF_MASK;
-
 	if (cb_end == cb_start)
 		cb_start = (cb_start+1) & CIRC_BUFF_MASK;
 
-	tasklet_schedule(&clearbuf);
+	mod_timer(&process_time_timer, jiffies + msecs_to_jiffies(20));
 
-#if 0
-	/*
- 	 *
-   	 * Calculate the length of the event 
- 	 *
- 	 */
-	len_time.base = len_time.jiff;
-	len_time.jiff = timer_services_counter_read(COUNTER_0) / calibration_n; 
-	event_len = (len_time.jiff > len_time.base) ?
-		 (len_time.jiff - len_time.base) : (len_time.jiff +
-		 0xffffffff - len_time.base);
-	store_ircbuffer(event_len);
-	if (event_len > (END_MIN/1000)) {
-		clearbuf.data = (unsigned long)dev_id;
-		tasklet_schedule(&clearbuf);
-	}
-#endif
 	return IRQ_HANDLED;
 }
 
