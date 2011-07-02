@@ -719,14 +719,14 @@ static int check_surface(struct fb_info *fi,
 		fbi->surface.viewPortInfo.uPitch != new_info->uPitch ||
 		fbi->surface.viewPortInfo.vPitch != new_info->vPitch)) {
                 if (!(new_addr && new_addr->startAddr[0])) {
-                        if (((new_info->srcWidth * new_info->srcHeight * var->bits_per_pixel / 8) * 2) > max_fb_size){
+                        if (((new_info->srcWidth * new_info->srcHeight * var->bits_per_pixel / 8)) > max_fb_size){
                                 printk("%s: requested memory buffer size %d exceed the max limit %d!\n", __func__,
                                        (new_info->srcWidth * new_info->srcHeight * var->bits_per_pixel / 4), max_fb_size);
                                 return changed;
                         }
                 }
                 var->xres_virtual = new_info->srcWidth;
-                var->yres_virtual = new_info->srcHeight * 2;
+                var->yres_virtual = new_info->srcHeight;
                 var->xres = new_info->srcWidth;
                 var->yres = new_info->srcHeight;
                 fbi->surface.viewPortInfo = *new_info;
@@ -1488,18 +1488,33 @@ static int pxa168fb_check_var(struct fb_var_screeninfo *var, struct fb_info *fi)
         }
 
 	if (var->xres + var->right_margin +
-	    var->hsync_len + var->left_margin > 2048)
+	    var->hsync_len + var->left_margin > 4096) {
+		dev_err(fi->dev, "Horizintal too large.  xres: %d  right_margin: %d  hsync_len: %d  left_margin: %d  Total: %d > 4096\n",
+		var->xres, var->right_margin,
+		var->hsync_len, var->left_margin,
+		var->xres+var->right_margin+var->hsync_len+var->left_margin);
 		return -EINVAL;
+	}
 	if (var->yres + var->lower_margin +
-	    var->vsync_len + var->upper_margin > 2048)
+	    var->vsync_len + var->upper_margin > 4096) {
+		dev_err(fi->dev, "Vertical too large.  yres: %d  upper_margin: %d  vsync_len: %d  lower_margin: %d  Total: %d > 4096\n",
+		var->yres, var->upper_margin,
+		var->vsync_len, var->lower_margin,
+		var->yres+var->upper_margin+var->vsync_len+var->lower_margin);
 		return -EINVAL;
+	}
 
 	/*
 	 * Check size of framebuffer.
 	 */
 	if (var->xres_virtual * var->yres_virtual *
-	    (var->bits_per_pixel >> 3) > max_fb_size)
+	    (var->bits_per_pixel >> 3) > max_fb_size) {
+		dev_err(fi->dev, "Data too large.  xres_virtual: %d  yres_virtual: %d  bytes_per_pixel: %d  total: %d > max_fb_size %d\n",
+		var->xres_virtual, var->yres_virtual, var->bits_per_pixel>>3,
+		var->xres_virtual+var->yres_virtual+(var->bits_per_pixel>>3),
+		max_fb_size);
 		return -EINVAL;
+	}
 
 	/*
 	 * Select most suitable hardware pixel format.
