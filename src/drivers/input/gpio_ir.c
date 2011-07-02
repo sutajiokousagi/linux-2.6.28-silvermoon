@@ -13,7 +13,6 @@
  *
  */
 
-#define DEBUG
 
 #include <linux/module.h>
 #include <linux/mutex.h>
@@ -90,7 +89,7 @@ ir_key_table_t *ir_key_table = nikon_key_table;
 
 
 
-static int decode_command(struct cir_device *cir, unsigned long cmd)
+static int decode_command(struct cir_device *cir, unsigned int cmd)
 {
 	ir_key_table_t *key = ir_key_table;
 	while (key->ir_encode) {
@@ -115,7 +114,7 @@ static void process_times(unsigned long data)
 {
 	struct cir_device *cir = (struct cir_device *)data;
 	int event_count = 0;
-	unsigned long cmd;
+	unsigned int cmd;
 	unsigned int cmd_shift;
 	unsigned long length, active;
 
@@ -350,6 +349,7 @@ static int __devexit cir_remove(struct platform_device *pdev)
 static struct platform_driver aspenite_cir_driver = {
 	.driver		= {
 		.name	= "aspenite-cir",
+		.owner  = THIS_MODULE,
 	},
 	.probe		= cir_probe,
 	.remove		= __devexit_p(cir_remove),
@@ -360,13 +360,7 @@ static struct platform_driver aspenite_cir_driver = {
 
 static int __init aspenite_cir_init(void)
 {
-	int ret = 0;
-	ret = platform_driver_register(&aspenite_cir_driver);
-	if (ret) {
-		printk(KERN_ERR "failed to register aspenite_cir_driver");
-		return ret;
-	}
-	return ret;
+	return platform_driver_register(&aspenite_cir_driver);
 }
 
 static void __exit aspenite_cir_exit(void)
@@ -374,5 +368,5 @@ static void __exit aspenite_cir_exit(void)
 	platform_driver_unregister(&aspenite_cir_driver);
 }
 
-late_initcall(aspenite_cir_init);
+module_init(aspenite_cir_init);
 module_exit(aspenite_cir_exit);
