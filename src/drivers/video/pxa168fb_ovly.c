@@ -90,7 +90,6 @@ static void collectFreeBuf(u8 *filterList[][3], u8 **freeList, int count);
 static u8 *filterBufList[MAX_QUEUE_NUM][3];
 static u8 *freeBufList[MAX_QUEUE_NUM];
 static atomic_t global_op_count = ATOMIC_INIT(0);
-static atomic_t dma_flag = ATOMIC_INIT(0);
 static unsigned int dma_base_address;
 static unsigned int max_fb_size = 0;
 static int gLastFrame = 0;
@@ -109,8 +108,6 @@ static unsigned int COMPAT_MODE;
 
 
 #if defined(CONFIG_MACH_CHUMBY_SILVERMOON)
-static dma_addr_t old_fbstart_dma;
-static void *old_fbstart;
 #define DEFAULT_WIDTH	1280
 #define DEFAULT_HEIGHT	720
 #else
@@ -1302,7 +1299,6 @@ static int pxa168fb_open(struct fb_info *fi, int user)
 
 static int pxa168fb_release(struct fb_info *fi, int user)
 {
-	u32 val;
 	struct pxa168fb_info *fbi = (struct pxa168fb_info *)fi->par;
 	struct fb_var_screeninfo *var = &fi->var;
 
@@ -1618,34 +1614,6 @@ static void set_graphics_start(struct fb_info *fi, int xoffset, int yoffset)
 }
 
 
-static void set_dumb_panel_control(struct fb_info *info)
-{
-	struct pxa168fb_info *fbi = info->par;
-	struct pxa168fb_mach_info *mi = fbi->dev->platform_data;
-	u32 x;
-
-	dev_dbg(info->dev, "Enter %s\n", __FUNCTION__);
-
-	/*
-	 * Preserve enable flag.
-	 */
-	x = readl(fbi->reg_base + LCD_SPU_DUMB_CTRL) & 0x00000001;
-
-	x |= (fbi->is_blanked ? 0x7 : mi->dumb_mode) << 28;
-	x |= mi->gpio_output_data << 20;
-	x |= mi->gpio_output_mask << 12;
-	x |= mi->panel_rgb_reverse_lanes ? 0x00000080 : 0;
-	x |= mi->invert_composite_blank ? 0x00000040 : 0;
-	x |= (info->var.sync & FB_SYNC_COMP_HIGH_ACT) ? 0x00000020 : 0;
-	x |= mi->invert_pix_val_ena ? 0x00000010 : 0;
-	x |= (info->var.sync & FB_SYNC_VERT_HIGH_ACT) ? 0x00000008 : 0;
-	x |= (info->var.sync & FB_SYNC_HOR_HIGH_ACT) ? 0x00000004 : 0;
-	x |= mi->invert_pixclock ? 0x00000002 : 0;
-
-	writel(x, fbi->reg_base + LCD_SPU_DUMB_CTRL);
-}
-
-
 static void set_dumb_screen_dimensions(struct fb_info *info)
 {
 	struct pxa168fb_info *fbi = info->par;
@@ -1955,111 +1923,48 @@ static int __init get_ovly_size(char *str)
 }
 __setup("ovly_size=", get_ovly_size);
 
-static struct delayed_work event_work;
-static int work_queued = 0;
-static struct pxa168fb_info *myfbi;
 
-static void hpd_update(struct work_struct *work) {
-  unsigned long temp = atomic_long_read(&(work->data));
-  struct pxa168fb_info *fbi = myfbi;
-  int retval;
-  char *envp[2];
 
-  // trigger a udev event when an attach or detach happens
-  if( __gpio_get_value(91) ? 1 : 0 ) {
-    printk( "got HPD attach event.\n" );
-    envp[0] = "TYPE=ATTACH";
-  } else {
-    printk( "got HPD detach event.\n" );
-    envp[0] = "TYPE=DETACH";
-  }
-  envp[1] = NULL;
-  retval = kobject_uevent_env(&(fbi->dev->kobj), KOBJ_CHANGE, envp);
-  printk( "kobject_uvent_env returned with %d\n", retval );
+struct pxa168fb_tasklet_data {
+	int irq;
+	struct pxa168fb_info *fbi;
+};
+static struct pxa168fb_tasklet_data tasklet_data;
 
-  work_queued = 0;
+
+static void fpga_isr_bottom_half(unsigned long data) {
+	struct pxa168fb_tasklet_data *d = (struct pxa168fb_tasklet_data *)data;
+	struct pxa168fb_info *fbi = d->fbi;
+	char *envp[2];
+	char *env = NULL;
+
+	if (d->irq == gpio_to_irq(93))
+		env = "TYPE=ALARM";
+	else if (d->irq == gpio_to_irq(92))
+		env = "TYPE=TRIGGER";
+	else if (d->irq == gpio_to_irq(91))
+		if (__gpio_get_value(91))
+			env = "TYPE=ATTACH";
+		else
+			env = "TYPE=DETACH";
+	else
+		dev_err(fbi->fb_info->dev, "Unrecognized IRQ: %d", d->irq);
+
+	envp[0] = env;
+	envp[1] = NULL;
+	kobject_uevent_env(&(fbi->dev->kobj), KOBJ_CHANGE, envp);
 }
 
-static irqreturn_t hpd_isr(int irqno, void *dev_id) {
-  struct pxa168fb_info *fbi = (struct pxa168fb_info *)dev_id;
+DECLARE_TASKLET(fpga_tasklet, fpga_isr_bottom_half, &tasklet_data);
 
-  if(!work_queued) {
-    work_queued = 1;
-    INIT_DELAYED_WORK(&event_work, hpd_update);
-    myfbi = fbi;
-    schedule_delayed_work(&event_work, 1); // 1 msec to fire
-  }
-
-  return IRQ_HANDLED;
+static irqreturn_t fpga_isr_top_half(int irqno, void *dev_id) {
+	struct pxa168fb_info *fbi = (struct pxa168fb_info *)dev_id;
+	tasklet_data.fbi = fbi;
+	tasklet_data.irq = irqno;
+	tasklet_schedule(&fpga_tasklet);
+	return IRQ_HANDLED;
 }
 
-
-static struct delayed_work event_work_hdcp;
-static int work_queued_hdcp = 0;
-
-static void hdcp_update(struct work_struct *work) {
-  unsigned long temp = atomic_long_read(&(work->data));
-  struct pxa168fb_info *fbi = myfbi;
-  int retval;
-  char *envp[2];
-
-  printk( "got HDCP key ready event.\n" );
-  envp[0] = "TYPE=TRIGGER";
-
-  envp[1] = NULL;
-  retval = kobject_uevent_env(&(fbi->dev->kobj), KOBJ_CHANGE, envp);
-  printk( "kobject_uvent_env returned with %d\n", retval );
-
-  work_queued_hdcp = 0;
-}
-
-static irqreturn_t hdcp_isr(int irqno, void *dev_id) {
-  struct pxa168fb_info *fbi = (struct pxa168fb_info *)dev_id;
-
-  if(!work_queued_hdcp) {
-    work_queued_hdcp = 1;
-    INIT_DELAYED_WORK(&event_work_hdcp, hdcp_update);
-    myfbi = fbi;
-    schedule_delayed_work(&event_work_hdcp, 1); // 1 msec to fire
-  }
-
-  return IRQ_HANDLED;
-}
-
-
-
-
-static struct delayed_work event_work_lowvolt;
-static int work_queued_lowvolt = 0;
-
-static void lowvolt_update(struct work_struct *work) {
-  unsigned long temp = atomic_long_read(&(work->data));
-  struct pxa168fb_info *fbi = myfbi;
-  int retval;
-  char *envp[2];
-
-  printk( "got low voltage event.\n" );
-  envp[0] = "TYPE=ALARM";
-
-  envp[1] = NULL;
-  retval = kobject_uevent_env(&(fbi->dev->kobj), KOBJ_CHANGE, envp);
-  printk( "kobject_uvent_env returned with %d\n", retval );
-
-  work_queued_lowvolt = 0;
-}
-
-static irqreturn_t lowvolt_isr(int irqno, void *dev_id) {
-  struct pxa168fb_info *fbi = (struct pxa168fb_info *)dev_id;
-
-  if(!work_queued_lowvolt) {
-    work_queued_lowvolt = 1;
-    INIT_DELAYED_WORK(&event_work_lowvolt, lowvolt_update);
-    myfbi = fbi;
-    schedule_delayed_work(&event_work_lowvolt, 1); // 1 msec to fire
-  }
-
-  return IRQ_HANDLED;
-}
 
 
 static int __init pxa168fb_probe(struct platform_device *pdev)
@@ -2281,41 +2186,41 @@ static int __init pxa168fb_probe(struct platform_device *pdev)
 		goto failed;
 	}
 
-	////////////////////////////////
-	////// allocate the HDP interrupt
+
+	/* Allocate the HDP interrupt GPIO */
 	gpio_request(91, "HPD report");
 	gpio_direction_input(91);
-	gpio_free(91);
 
-	// allocate the HPD IRQ
-	ret = request_irq(IRQ_GPIO(91), hpd_isr, IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING, "HPD trigger", fbi);
-	if( ret ) {
-	  printk( "Can't allocate IRQ 91 for HPD trigger\n" );
-	}
+	/* Allocate the HPD IRQ */
+	ret = request_irq(IRQ_GPIO(91), fpga_isr_top_half,
+			  IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
+			  "HPD trigger", fbi);
+	if (ret)
+		dev_err(&pdev->dev, "Can't allocate IRQ 91 for HPD trigger");
 
-	////////////////////////////////
-	////// allocate the hdcp interrupt
+
+	/* Allocate the hdcp interrupt GPIO */
 	gpio_request(92, "HDCP Aksv ready");
 	gpio_direction_input(92);
-	gpio_free(92);
 
-	// allocate the HPD IRQ
-	ret = request_irq(IRQ_GPIO(92), hdcp_isr, IRQF_TRIGGER_RISING, "HDCP Aksv ready", fbi);
-	if( ret ) {
-	  printk( "Can't allocate IRQ 92 for HDCP trigger\n" );
-	}
+	/* Allocate the HPD IRQ */
+	ret = request_irq(IRQ_GPIO(92), fpga_isr_top_half,
+			  IRQF_TRIGGER_RISING,
+			 "HDCP Aksv ready", fbi);
+	if(ret)
+		dev_err(&pdev->dev, "Can't allocate IRQ 92 for HDCP trigger");
 
-	////////////////////////////////
-	////// allocate the low voltage interrupt
+
+	/* Allocate the low voltage interrupt GPIO */
 	gpio_request(93, "Low voltage emergency");
 	gpio_direction_input(93);
-	gpio_free(93);
 
-	// allocate the HPD IRQ
-	ret = request_irq(IRQ_GPIO(93), lowvolt_isr, IRQF_TRIGGER_RISING, "Low voltage emergency", fbi);
-	if( ret ) {
-	  printk( "Can't allocate IRQ 93 for low voltage interrupt\n" );
-	}
+	/* Allocate the HPD IRQ */
+	ret = request_irq(IRQ_GPIO(93), fpga_isr_top_half,
+			  IRQF_TRIGGER_RISING,
+			 "Low voltage emergency", fbi);
+	if (ret)
+		dev_err(&pdev->dev, "Can't allocate IRQ 93 for low voltage interrupt");
 
 	/*
 	 * Enable Video interrupt
