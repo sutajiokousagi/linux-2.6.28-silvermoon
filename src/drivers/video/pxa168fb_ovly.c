@@ -49,16 +49,6 @@
 	printk("pxa168fb_ovly.c - %s():%d - " format, __func__, __LINE__, ## arg)
 
 
-#define MFPR_VIRT_BASE  (APB_VIRT_BASE + 0x1e000)
-#define chpause() \
-    __raw_writel(0x8001, MFPR_VIRT_BASE+0x150); \
-	CHLOG("Waiting a sec before continuing...\n"); \
-	mdelay(1000); \
-	CHLOG("Okay, continuing boot.\n"); \
-	__raw_writel(0x8000, MFPR_VIRT_BASE+0x150); \
-	mdelay(1000);
-
-
 
 #ifdef CONFIG_DVFM
 #include <mach/dvfm.h>
@@ -170,43 +160,6 @@ static void pxa168fb_do_tasklet(unsigned long data)
 	pxa168fb_switch_buff(fi);
 }
 
-#if 0 /* unused */
-static struct fb_videomode *
-find_best_mode(struct pxa168fb_info *fbi, struct fb_var_screeninfo *var)
-{
-	struct pxa168fb_mach_info *mi = fbi->dev->platform_data;
-	struct fb_videomode *best_mode;
-	int i;
-
-        dev_dbg(fbi->fb_info->dev, "Enter %s\n", __FUNCTION__);
-	best_mode = NULL;
-	for (i = 0; i < mi->num_modes; i++) {
-		struct fb_videomode *m = mi->modes + i;
-
-		/*
-		 * Check whether this mode is suitable.
-		 */
-		if (var->xres > m->xres)
-			continue;
-		if (var->yres > m->yres)
-			continue;
-
-		/*
-		 * Check whether this mode is more suitable than
-		 * the best mode so far.
-		 */
-		if (best_mode != NULL &&
-		    (best_mode->xres < m->xres ||
-		     best_mode->yres < m->yres ||
-		     best_mode->pixclock > m->pixclock))
-			continue;
-
-		best_mode = m;
-	}
-
-	return best_mode;
-}
-#endif
 
 static int determine_best_pix_fmt(struct fb_var_screeninfo *var)
 {
