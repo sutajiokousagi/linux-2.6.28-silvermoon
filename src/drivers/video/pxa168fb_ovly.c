@@ -1814,24 +1814,8 @@ static int pxa168fb_set_par(struct fb_info *fi)
 	 * Force the zoom on the second framebuffer to, by default, be the
 	 * same size as the screen.
 	 */
-	if (yzoom == 0 && xzoom == 0)
-	{
-		yzoom = DEFAULT_HEIGHT;
-		xzoom = DEFAULT_WIDTH;
-		printk( "%s() warning: viewport x/y zoom were 0\n", __FUNCTION__ );
-		fbi->surface.viewPortInfo.zoomYSize = DEFAULT_HEIGHT;
-		fbi->surface.viewPortInfo.zoomXSize = DEFAULT_WIDTH;
-	}
-	else if (yzoom == 0)
-	{
-		yzoom = DEFAULT_HEIGHT;
-		printk( "%s() warning: viewport y == 0\n", __FUNCTION__ );
-	}
-	else if (xzoom == 0)
-	{
-		xzoom = DEFAULT_WIDTH;
-		printk( "%s() warning: viewport x == 0\n", __FUNCTION__ );
-	}
+	xzoom = var->xres;
+	yzoom = var->yres;
 
 	/* Fix the DMA queue depth, to prevent red lines on videos */
 	/* Note: Thsi register is called LCD_MISC_CNTL in the docs */
@@ -1865,7 +1849,6 @@ static int pxa168fb_set_par(struct fb_info *fi)
 	/*
 	 * Configure dumb panel ctrl regs & timings.
 	 */
-	//set_dumb_panel_control(info);
 	set_dumb_screen_dimensions(fi);
 
 	writel((var->yres << 16) | var->xres,
