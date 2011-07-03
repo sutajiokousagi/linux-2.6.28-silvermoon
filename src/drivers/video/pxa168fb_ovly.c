@@ -1488,16 +1488,16 @@ static int pxa168fb_check_var(struct fb_var_screeninfo *var, struct fb_info *fi)
         }
 
 	if (var->xres + var->right_margin +
-	    var->hsync_len + var->left_margin > 2048) {
-		dev_err(fi->dev, "Horizintal too large.  xres: %d  right_margin: %d  hsync_len: %d  left_margin: %d  Total: %d > 2048\n",
+	    var->hsync_len + var->left_margin > 4096) {
+		dev_err(fi->dev, "Horizintal too large.  xres: %d  right_margin: %d  hsync_len: %d  left_margin: %d  Total: %d > 4096\n",
 		var->xres, var->right_margin,
 		var->hsync_len, var->left_margin,
 		var->xres+var->right_margin+var->hsync_len+var->left_margin);
 		return -EINVAL;
 	}
 	if (var->yres + var->lower_margin +
-	    var->vsync_len + var->upper_margin > 2048) {
-		dev_err(fi->dev, "Vertical too large.  yres: %d  upper_margin: %d  vsync_len: %d  lower_margin: %d  Total: %d > 2048\n",
+	    var->vsync_len + var->upper_margin > 4096) {
+		dev_err(fi->dev, "Vertical too large.  yres: %d  upper_margin: %d  vsync_len: %d  lower_margin: %d  Total: %d > 4096\n",
 		var->yres, var->upper_margin,
 		var->vsync_len, var->lower_margin,
 		var->yres+var->upper_margin+var->vsync_len+var->lower_margin);
