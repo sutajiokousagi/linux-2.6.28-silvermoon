@@ -736,7 +736,7 @@ struct platform_device silvermoon_bl_device = {
 
 static struct gpio_keys_button gpio_keys_button[] = {
 	[0] = {
-		.desc   = "recovery",
+		.desc   = "recovery button",
 		.code   = KEY_VENDOR,
 		.type   = EV_KEY,
 		.gpio   = 89,
