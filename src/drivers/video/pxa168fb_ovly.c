@@ -1937,14 +1937,14 @@ static void fpga_isr_bottom_half(unsigned long data) {
 	char *env = NULL;
 
 	if (d->irq == gpio_to_irq(93))
-		env = "TYPE=ALARM";
+		env = "TYPE=alarm";
 	else if (d->irq == gpio_to_irq(92))
-		env = "TYPE=TRIGGER";
+		env = "TYPE=trigger";
 	else if (d->irq == gpio_to_irq(91))
 		if (__gpio_get_value(91))
-			env = "TYPE=ATTACH";
+			env = "TYPE=attach";
 		else
-			env = "TYPE=DETACH";
+			env = "TYPE=detach";
 	else
 		dev_err(fbi->fb_info->dev, "Unrecognized IRQ: %d", d->irq);
 
