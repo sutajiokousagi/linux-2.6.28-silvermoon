@@ -86,8 +86,16 @@ ir_key_table_t nikon_key_table[] = {
 };
 
 ir_key_table_t *ir_key_table = nikon_key_table;
+int last_key = 0;
 
-
+static void send_keyup(unsigned long data)
+{
+	struct cir_device *cir = (struct cir_device *)data;
+	if (last_key)
+		input_report_key(cir->input_dev, last_key, 0);
+	last_key = 0;
+}
+DEFINE_TIMER(send_keyup_timer, send_keyup, 0, 0);
 
 static int decode_command(struct cir_device *cir, unsigned int cmd)
 {
@@ -96,13 +104,16 @@ static int decode_command(struct cir_device *cir, unsigned int cmd)
 		if (key->ir_encode == cmd) {
 			dev_dbg(&cir->pdev->dev,
 				"Found key %d\n", key->ir_key);
+			if (last_key)
+				input_report_key(cir->input_dev, last_key , 0);
+			last_key = key->ir_key;
 			input_report_key(cir->input_dev, key->ir_key , 1);
-			input_report_key(cir->input_dev, key->ir_key , 0);
+
 			return 0;
 		}
 		key++;
 	}
-	dev_err(&cir->pdev->dev, "No key found for code 0x%08x\n", cmd);
+	dev_dbg(&cir->pdev->dev, "No key found for code 0x%08x\n", cmd);
 	return 1;
 }
 
@@ -157,6 +168,9 @@ static void process_times(unsigned long data)
 	}
 	if (cmd)
 		decode_command(cir, cmd);
+
+	send_keyup_timer.data = (unsigned long)cir;
+	mod_timer(&send_keyup_timer, jiffies + msecs_to_jiffies(200));
 
 	if (cmd)
 		dev_dbg(&cir->pdev->dev, "Read out %d events: 0x%08x\n",
