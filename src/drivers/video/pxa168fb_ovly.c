@@ -1264,7 +1264,7 @@ static int pxa168fb_open(struct fb_info *fi, int user)
 
 	atomic_inc(&global_op_count);
 
-	if (atomic_read(&global_op_count) == 1) {
+//	if (atomic_read(&global_op_count) == 1) {
 		mutex_lock(&fbi->access_ok);
 		mi = fbi->dev->platform_data;
 		fbi->new_addr[0] = 0;
@@ -1292,7 +1292,7 @@ static int pxa168fb_open(struct fb_info *fi, int user)
 		val |= CFG_DMA_ENA_MASK;
 		writel(val, fbi->reg_base + LCD_SPU_DMA_CTRL0);
 		mutex_unlock(&fbi->access_ok);
-	}
+//	}
 	return 0;
 }
 
