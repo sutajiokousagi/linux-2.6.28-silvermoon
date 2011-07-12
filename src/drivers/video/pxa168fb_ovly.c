@@ -923,7 +923,6 @@ static int pxa168fb_ioctl(struct fb_info *fi, unsigned int cmd,
 					(dma_addr_t)__pa(fbi->fb_start);
 				fbi->mem_status = 1;
 				fi->fix.smem_start = fbi->fb_start_dma;
-				fi->fix.smem_len = fbi->fb_size;
 				fi->screen_base = fbi->fb_start;
 				fi->screen_size = fbi->fb_size;
 			}
@@ -1763,7 +1762,6 @@ static int pxa168fb_set_par(struct fb_info *fi)
                        fbi->reg_base + LCD_SPU_DZM_HPXL_VLN);
         }
 
-        fi->fix.smem_len = var->xres_virtual * var->yres_virtual * var->bits_per_pixel/8;
         fi->screen_size = fi->fix.smem_len;
 
 #if defined(CONFIG_MACH_CHUMBY_SILVERMOON)
@@ -2046,6 +2044,7 @@ static int __init pxa168fb_probe(struct platform_device *pdev)
 	}
 	max_fb_size = PAGE_ALIGN(max_fb_size);
 	fbi->fb_size = max_fb_size;
+	fi->fix.smem_len = max_fb_size;
 
 	/*
 	 * FIXME, It may fail to alloc DMA buffer from dma_alloc_xxx
@@ -2130,7 +2129,6 @@ static int __init pxa168fb_probe(struct platform_device *pdev)
 
 	memset(fbi->fb_start, 0, fbi->fb_size);
 	fi->fix.smem_start = fbi->fb_start_dma;
-	fi->fix.smem_len = fbi->fb_size;
 	fi->screen_base = fbi->fb_start;
 	fi->screen_size = fbi->fb_size;
 	dma_base_address = (unsigned int)fbi->fb_start_dma;
