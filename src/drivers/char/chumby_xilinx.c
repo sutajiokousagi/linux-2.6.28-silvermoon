@@ -233,15 +233,11 @@ ssize_t fpga_write(struct file *filp, const char __user *buf, size_t count,
 	PDEBUG( "wrote %d bytes\n", count );
 	
 	if( count % 2 ) {
-	  gpio_request(45, "GPIO45");
 	  gpio_direction_output(45, 1);
 	  gpio_set_value(45, 1);
-	  gpio_free(45);
 	} else {
-	  gpio_request(45, "GPIO45");
 	  gpio_direction_output(45, 1);
 	  gpio_set_value(45, 0);
-	  gpio_free(45);
 	}
 
 	retval = count; // this means we got it all
@@ -289,52 +285,38 @@ int fpga_ioctl(struct inode *inode, struct file *filp,
 
 	case FPGA_IOCRESET:
 	  printk( "chumby_xilinx ioctl: Resetting FPGA\n" );
-	  gpio_request(119, "FPGA reset (active low)");
 	  gpio_direction_output(119,1);
 	  gpio_set_value(119,0); // strobe low
 	  udelay(2); // give it 2 usecs to settle
 	  gpio_set_value(119,1);
-	  gpio_free(119);
 	  break;
 	  
 	case FPGA_IOCLED0:
 	  PDEBUG( "chumby_xilinx ioctl: led0 %d\n", arg );
 	  if(arg) {
-	    gpio_request(45, "LED 0");
 	    gpio_set_value(45, 0);
-	    gpio_free(45);
 	  } else {
-	    gpio_request(45, "LED 0");
 	    gpio_set_value(45, 1);
-	    gpio_free(45);
 	  }
 	  break;
         
 	case FPGA_IOCLED1:
 	  PDEBUG( "chumby_xilinx ioctl: led1 %d\n", arg );
 	  if(arg) {
-	    gpio_request(46, "LED 0");
 	    gpio_set_value(46, 0);
-	    gpio_free(46);
 	  } else {
-	    gpio_request(46, "LED 0");
 	    gpio_set_value(46, 1);
-	    gpio_free(46);
 	  }
 	  break;
 
 	case FPGA_IOCDONE:
-	  gpio_request(97, "FPGA done");
 	  tmp = __gpio_get_value(97) ? 1 : 0;
 	  __put_user(tmp, (int __user *)arg);
-	  gpio_free(97);
 	  break;
 
 	case FPGA_IOCINIT:
-	  gpio_request(120, "FPGA init");
 	  tmp = __gpio_get_value(120) ? 1 : 0;
 	  __put_user(tmp, (int __user *)arg);
-	  gpio_free(120);
 	  break;
         
 	  default:  /* redundant, as cmd was checked against MAXNR */
@@ -371,17 +353,20 @@ void fpga_cleanup_module(void)
 
 
 	// turn off the LEDs
-  gpio_request(45, "LED 0");
   gpio_direction_output(45, 1);
   gpio_set_value(45, 1);
   gpio_free(45);
 
-  gpio_request(46, "LED 1");
   gpio_direction_output(46, 1);
   gpio_set_value(46, 1);
   gpio_free(46);
 
   free_irq(IRQ_GPIO(49), NULL);
+  gpio_direction_input(120);
+  gpio_direction_input(97);
+  gpio_direction_input(49);
+  gpio_direction_input(91);
+  gpio_direction_input(119);
 
 	/* Get rid of our char dev entries */
 	if (fpga_devices) {
@@ -471,28 +456,22 @@ void fpga_init_hw(void) {
   gpio_request(45, "LED 0");
   gpio_direction_output(45, 1);
   gpio_set_value(45, 0);
-  gpio_free(45);
 
   gpio_request(46, "LED 1");
   gpio_direction_output(46, 1);
   gpio_set_value(46, 0);
-  gpio_free(46);
 
   gpio_request(120, "FPGA init");
   gpio_direction_input(120);
-  gpio_free(120);
 
   gpio_request(97, "FPGA done");
   gpio_direction_input(97);
-  gpio_free(97);
 
   gpio_request(49, "vsync genlock");
   gpio_direction_input(49);
-  gpio_free(49);
 
   gpio_request(91, "HPD report");
   gpio_direction_input(91);
-  gpio_free(91);
 
   printk("SSP2 clock enable (52 MHz)\n");
   __raw_writel(0x33,(APB_VIRT_BASE + 0x15820));
@@ -578,7 +557,6 @@ void fpga_init_hw(void) {
   gpio_set_value(119,0); // strobe low
   udelay(2); // give it 2 usecs to settle
   gpio_set_value(119,1);
-  gpio_free(119);
 
   // allocate the sync IRQ
   ret = request_irq(IRQ_GPIO(49), genlock_isr, IRQF_TRIGGER_RISING, "genlock trigger", NULL);
