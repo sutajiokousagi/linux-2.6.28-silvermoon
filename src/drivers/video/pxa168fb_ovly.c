@@ -12,6 +12,7 @@
  * more details.
  */
 
+
 /*
  * 1. Adapted from:  linux/drivers/video/skeletonfb.c
  * 2. Merged from: linux/drivers/video/dovefb.c (Lennert Buytenhek)
@@ -510,7 +511,7 @@ static void pxa168_sync_colorkey_structures(struct pxa168fb_info *fbi, int direc
 {
         struct _sColorKeyNAlpha *colorkey = &fbi->ckey_alpha;
         struct pxa168_fb_chroma *chroma = &fbi->chroma;
-        unsigned int temp;
+	unsigned int temp;
         
         dev_dbg(fbi->fb_info->dev, "ENTER %s\n", __FUNCTION__);
         if (direction == FB_SYNC_COLORKEY_TO_CHROMA) {
@@ -1953,7 +1954,7 @@ static void fpga_isr_bottom_half(unsigned long data) {
 	kobject_uevent_env(&(fbi->dev->kobj), KOBJ_CHANGE, envp);
 }
 
-DECLARE_TASKLET(fpga_tasklet, fpga_isr_bottom_half, &tasklet_data);
+DECLARE_TASKLET(fpga_tasklet, fpga_isr_bottom_half, (unsigned long)&tasklet_data);
 
 static irqreturn_t fpga_isr_top_half(int irqno, void *dev_id) {
 	struct pxa168fb_info *fbi = (struct pxa168fb_info *)dev_id;
@@ -1964,13 +1965,13 @@ static irqreturn_t fpga_isr_top_half(int irqno, void *dev_id) {
 }
 
 
-
 static int __init pxa168fb_probe(struct platform_device *pdev)
 {
 	struct pxa168fb_mach_info *mi;
 	struct fb_info *fi;
 	struct pxa168fb_info *fbi;
 	struct resource *res;
+	unsigned long old_addr;
 	int ret;
         int temp;
 
@@ -2032,6 +2033,9 @@ static int __init pxa168fb_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto failed;
 	}
+	old_addr = (unsigned long)readl(fbi->reg_base + 0x0c0);
+
+	dump_registers(fbi);
 
 	/*
 	 * Allocate framebuffer memory.
@@ -2063,7 +2067,7 @@ static int __init pxa168fb_probe(struct platform_device *pdev)
 	}
 
 	if (fbi->fb_start == NULL) {
-		printk("%s: no enough memory!\n", __func__);
+		printk("%s: not enough memory!\n", __func__);
 		ret = -ENOMEM;
 		goto failed;
 	}
@@ -2072,31 +2076,15 @@ static int __init pxa168fb_probe(struct platform_device *pdev)
 	temp = readl(fbi->reg_base + LCD_SPU_DMA_CTRL0);
 
 #ifdef CONFIG_MACH_CHUMBY_SILVERMOON
-	/*
-	 * Point the overlay (fb1) at where fb0 used to be.  This will let us hide
-	 * transitions of colorspace on fb0 while it's brought up.
-	 * Note that the overlay driver hasn't been loaded yet.
-	 */
+	/* Copy the framebuffer from the old offset to the new one */
 	{
-		/*
-		unsigned int i;
-		unsigned int old_fb0 = readl(fbi->reg_base + LCD_CFG_GRA_START_ADDR0);
-		old_fbstart = dma_alloc_writecombine(fbi->dev, 1280*720*2,
-						&old_fbstart_dma,
-						GFP_KERNEL);
-		for(i=0; i<1280*720*2; i++) {
-			char *dst = (char *)phys_to_virt(((char *)old_fbstart_dma)+i);
-			char *src = (char *)phys_to_virt(((char *)old_fb0)+i);
-			*dst = *src;
+		char *old_fb = (char *)ioremap(old_addr, DEFAULT_WIDTH*DEFAULT_HEIGHT*2);
+		if(old_fb) {
+			memcpy(fbi->fb_start, old_fb, DEFAULT_WIDTH*DEFAULT_HEIGHT*2);
+			iounmap(old_fb);
 		}
-		gra_dma_base_address = old_fbstart_dma;
-		writel(0x00000000, fbi->reg_base + LCD_SPUT_DMA_OVSA_HPXL_VLN);
-		CHLOG("Just pointed fb0 at %p\n", old_fbstart_dma);
-		*/
-		unsigned int old_fb0 = readl(fbi->reg_base + LCD_CFG_GRA_START_ADDR0);
-		gra_dma_base_address = old_fb0;
-		writel(0x00000000, fbi->reg_base + LCD_SPUT_DMA_OVSA_HPXL_VLN);
-		//CHLOG("Just pointed fb0 at %p\n", old_fb0);
+		else
+		    dev_err(&pdev->dev, "Unable to call ioremap!");
 	}
 
 	/* Set alpha to full-on by default */
@@ -2125,9 +2113,9 @@ static int __init pxa168fb_probe(struct platform_device *pdev)
 
 	temp &= ~(CFG_DMA_ENA_MASK);
 	writel(temp, fbi->reg_base + LCD_SPU_DMA_CTRL0);
+	memset(fbi->fb_start, 0, fbi->fb_size);
 #endif
 
-	memset(fbi->fb_start, 0, fbi->fb_size);
 	fi->fix.smem_start = fbi->fb_start_dma;
 	fi->screen_base = fbi->fb_start;
 	fi->screen_size = fbi->fb_size;
@@ -2235,6 +2223,38 @@ static int __init pxa168fb_probe(struct platform_device *pdev)
 
 	printk(KERN_INFO "pxa168fb_ovly: frame buffer device was loaded"
 		" to /dev/fb%d <%s>.\n", fi->node, fi->fix.id);
+
+
+	{
+		struct fb_var_screeninfo *var = &fi->var;
+		u32 val;
+		fbi->new_addr[0] = 0;
+		fbi->new_addr[1] = 0;
+		fbi->new_addr[2] = 0;
+		fi->fix.smem_start = fbi->fb_start_dma;
+		fi->screen_base = fbi->fb_start;
+		fbi->surface.videoMode = -1;
+		fbi->surface.viewPortInfo.srcWidth = var->xres;
+		fbi->surface.viewPortInfo.srcHeight = var->yres;
+		fbi->active = 1;
+		set_pix_fmt(var, fbi->pix_fmt);
+		pxa168fb_set_par(fi);
+
+		/* clear buffer list. */
+
+		clearFilterBuf(filterBufList, RESET_BUF);
+		clearFreeBuf(freeBufList, RESET_BUF|FREE_ENTRY);
+
+		/* Compatibility with older PXA behavior.
+		   Force Video DMA engine on during the OPEN.
+		*/
+
+		val = readl(fbi->reg_base + LCD_SPU_DMA_CTRL0);
+		val |= CFG_DMA_ENA_MASK;
+		writel(val, fbi->reg_base + LCD_SPU_DMA_CTRL0);
+	}
+
+	dump_registers(fbi);
 
 #ifdef CONFIG_DVFM
 	dvfm_register("overlay1", &dvfm_dev_idx);

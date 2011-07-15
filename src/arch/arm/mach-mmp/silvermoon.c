@@ -403,7 +403,7 @@ static struct i2c_pxa_platform_data xi2c_info __initdata = {
 // example of video mode(s) set for 800x600 (albeit not in RGB565 DMA mode)
 static struct fb_videomode video_modes_aspen[] = {
 	[0] = {
-		.pixclock       = 74176,
+		.pixclock       = 74175,
 		.refresh        = 60,
 		.xres           = 1280,
 		.yres           = 720,
@@ -413,9 +413,6 @@ static struct fb_videomode video_modes_aspen[] = {
 		.vsync_len      = 5 /*4*/,
 		.upper_margin   = 5, // 23
 		.lower_margin   = 20, // 1
-
-		// henry - if these are set, invert vsync / hsync are turned OFF:
-		// FB_SYNC_VERT_HIGH_ACT | FB_SYNC_HOR_HIGH_ACT,
 		.sync           = FB_SYNC_VERT_HIGH_ACT,
 	},
 
