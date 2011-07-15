@@ -73,6 +73,7 @@ static unsigned int cb_start=0, cb_end=0;
  * Table of IR-signal-code and key
  */
 ir_key_table_t nikon_key_table[] = {
+	/* Old, Nikon remote */
 	{0xb946f685, KEY_CONFIG},
 	{0xba45f685, KEY_VENDOR},
 	{0xbc43f685, KEY_UP},
@@ -82,6 +83,17 @@ ir_key_table_t nikon_key_table[] = {
 	{0xbb44f685, KEY_DOWN},
 	{0xb748f685, KEY_1},
 	{0xb847f685, KEY_2},
+
+	/* New remote */
+	{0xb946fe85, KEY_CONFIG},
+	{0xba45fe85, KEY_VENDOR},
+	{0xbc43fe85, KEY_UP},
+	{0xbd42fe85, KEY_LEFT},
+	{0xbf40fe85, KEY_ENTER},
+	{0xbe41fe85, KEY_RIGHT},
+	{0xbb44fe85, KEY_DOWN},
+
+	/* End of line */
 	{0,          0},
 };
 
