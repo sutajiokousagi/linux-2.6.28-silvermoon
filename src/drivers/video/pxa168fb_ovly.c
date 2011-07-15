@@ -2035,8 +2035,6 @@ static int __init pxa168fb_probe(struct platform_device *pdev)
 	}
 	old_addr = (unsigned long)readl(fbi->reg_base + 0x0c0);
 
-	dump_registers(fbi);
-
 	/*
 	 * Allocate framebuffer memory.
 	 */
@@ -2253,8 +2251,6 @@ static int __init pxa168fb_probe(struct platform_device *pdev)
 		val |= CFG_DMA_ENA_MASK;
 		writel(val, fbi->reg_base + LCD_SPU_DMA_CTRL0);
 	}
-
-	dump_registers(fbi);
 
 #ifdef CONFIG_DVFM
 	dvfm_register("overlay1", &dvfm_dev_idx);
