@@ -770,10 +770,24 @@ static void __init silvermoon_init(void)
 	pxa168_set_vdd_iox(VDD_IO4, VDD_IO_3P3V);
 	pxa168_mfp_set_fastio_drive(MFP_DS02X);
 
+#ifdef CONFIG_USB_GADGET_PXA_U2O
+ 	pxa168_add_u2o(&aspenite_u2o_info);
+#endif
+
+#ifdef CONFIG_USB_OTG
+	pxa168_add_u2ootg(&aspenite_u2o_info);
+	pxa168_add_u2oehci(&aspenite_u2o_info);
+#endif
+
+#ifdef CONFIG_USB_EHCI_PXA_U2H
+ 	pxa168_add_u2h(&aspenite_u2h_info);
+#endif
+
+	// Addr=2 for MMC3
+	pxa168_add_sdh(2, &aspenite_sdh_platform_data_MMC3);
+
 
 	//Make sure the GPIO 109 is set as output, level low
-
-
 	if(gpio_request(gpio_109, "GPIO109")) 
 	{
 		printk(KERN_ERR "GPIO109 Request Failed\n");
@@ -793,54 +807,8 @@ static void __init silvermoon_init(void)
 	pxa168_add_twsi(0, &xi2c_info, ARRAY_AND_SIZE(xi2c_board_info));
 	pxa168_add_twsi(1, &pwri2c_info, ARRAY_AND_SIZE(pwri2c_board_info));
 	pxa168_add_ssp(0);
-#if defined(CONFIG_TOUCHSCREEN_ASPEN) || defined(CONFIG_TOUCHSCREEN_ASPEN_MODULE)
-	// SSP2 used for CP-based touchscreen
-	printk( "%s() - attempting to add SSP2 for touchscreen\n", __FUNCTION__ );
-	silvermoon_ssp_init();
-#if defined(CONFIG_TOUCHSCREEN_ASPEN)
-       // Register platform device now iff not loading as module
-        silvermoon_touchscreen_init();
-#endif
-#else
-	printk( "%s() - CONFIG_TOUCHSCREEN_ASPEN not set??\n", __FUNCTION__ );
-#endif
 
-#ifdef CONFIG_USB_GADGET_PXA_U2O
- 	pxa168_add_u2o(&aspenite_u2o_info);
-#endif
 
-#ifdef CONFIG_USB_OTG
-	pxa168_add_u2ootg(&aspenite_u2o_info);
-	pxa168_add_u2oehci(&aspenite_u2o_info);
-#endif
-
-#ifdef CONFIG_USB_EHCI_PXA_U2H
-	printk( "%s() - adding u2h ehci usb hub\n", __FUNCTION__ );
- 	pxa168_add_u2h(&aspenite_u2h_info);
-#endif
-//	pxa168_add_mfu(&pxa168_eth_data);
-#if defined(CONFIG_MMC_PXA_SDH) || defined(CONFIG_MMC_PXA_SDH_MODULE)
-#if defined(CONFIG_CHUMBY_SILVERMOON_SDBOOT)
-#define WIFI_SDIO_ADDR	1 // MMC2
-#else
-#define WIFI_SDIO_ADDR	2 // MMC3
-#endif
-#if defined(CONFIG_WLAN_8688_SDIO) || defined(CONFIG_WLAN_8688_SDIO_MODULE)
-#define ESD_SDIO_ADDR	2
-#else
-#define ESD_SDIO_ADDR	1
-#endif
-	// This is not present but may be needed for the driver to work properly with MMC2/MMC3
-	pxa168_add_sdh(0, &aspenite_sdh_platform_data_MMC1);
-#if defined(CONFIG_WLAN_8688_SDIO) || defined(CONFIG_WLAN_8688_SDIO_MODULE)
-	pxa168_add_sdh(WIFI_SDIO_ADDR, &aspenite_sdh_platform_data_MMC2);
-#endif
-#if defined(CONFIG_CHUMBY_SILVERMOON_SDBOOT)
-	// Addr=2 for MMC3
-	pxa168_add_sdh(ESD_SDIO_ADDR, &aspenite_sdh_platform_data_MMC3);
-	printk( "%s() - adding MMC3 init[%d], wifi MMC%d\n", __FUNCTION__, ESD_SDIO_ADDR, WIFI_SDIO_ADDR );
-#endif
-#endif
 #if defined(CONFIG_PXA168_CF)
 	/* pxa168_add_cf(); */
 	pxa168_cf_init();
@@ -849,7 +817,6 @@ static void __init silvermoon_init(void)
 	pxa168_add_freq();
 
 	pxa168_add_fb_ovly(&silvermoon_lcd_ovly_info);
-	//pxa168_add_fb(&silvermoon_lcd_info);
 
 #if defined(CONFIG_PXA168_CAMERA) || defined(CONFIG_PXA168_CAMERA_MODULE)
 	pxa168_add_cam();
@@ -860,13 +827,8 @@ static void __init silvermoon_init(void)
 #endif
 
 	platform_device_register(&silvermoon_bl_device);
-
 	platform_device_register(&pxa910_device_rtc);
-
-	ret = platform_device_register(&netv_gpio_keys_device);
-        if (ret)
-                dev_err(&netv_gpio_keys_device.dev,
-                        "unable to register gpio keys: %d\n", ret);
+	platform_device_register(&netv_gpio_keys_device);
 }
 
 MACHINE_START(CHUMBY_SILVERMOON, "PXA168-based Chumby Silvermoon platform")
