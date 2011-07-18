@@ -597,7 +597,7 @@ hibernate_sram_start:
 	@ ddr self refresh
 	ldr	r7, [r4, #0x0120]
 
-	ldr	r11, =MACH_TYPE_WAYLAND
+	ldr	r11, =MACH_TYPE_ASPENITE
 	cmp	r10, r11
 	moveq	r7, #0x01000000	@ special for wayland
 
@@ -618,7 +618,7 @@ hibernate_sram_start:
 	cmp	r10, r11
 	beq	avenger_power_down
 
-	ldr	r11, =MACH_TYPE_WAYLAND
+	ldr	r11, =MACH_TYPE_ASPENITE
 	cmp	r10, r11
 	beq	wayland_power_down
 
