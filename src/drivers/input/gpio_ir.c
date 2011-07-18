@@ -78,7 +78,7 @@ ir_key_table_t nikon_key_table[] = {
 	{0xba45f685, KEY_VENDOR},
 	{0xbc43f685, KEY_UP},
 	{0xbd42f685, KEY_LEFT},
-	{0xbf40f685, KEY_RETURN},
+	{0xbf40f685, KEY_ENTER},
 	{0xbe41f685, KEY_RIGHT},
 	{0xbb44f685, KEY_DOWN},
 	{0xb748f685, KEY_1},
@@ -89,7 +89,7 @@ ir_key_table_t nikon_key_table[] = {
 	{0xba45fe85, KEY_VENDOR},
 	{0xbc43fe85, KEY_UP},
 	{0xbd42fe85, KEY_LEFT},
-	{0xbf40fe85, KEY_RETURN},
+	{0xbf40fe85, KEY_ENTER},
 	{0xbe41fe85, KEY_RIGHT},
 	{0xbb44fe85, KEY_DOWN},
 
