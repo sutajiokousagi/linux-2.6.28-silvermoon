@@ -565,7 +565,7 @@ err:
 	return ret;
 }
 
-static int __devexit pxa_sdh_remove(struct platform_device *pdev)
+static int pxa_sdh_remove(struct platform_device *pdev)
 {
 	struct sdhci_mmc_chip *chip;
 	int i;
