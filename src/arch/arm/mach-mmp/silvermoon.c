@@ -167,11 +167,10 @@ static unsigned long silvermoon_pin_config[] __initdata = {
 	GPIO116_I2S_RXD,
 	GPIO117_I2S_TXD,
 
-#if defined(CONFIG_CHUMBY_XILINX) || defined(CONFIG_CHUMBY_XILINX_MODULE)
+	/* Configure FPGA pins */
 	MFP_CFG(GPIO91, AF0), /* HPD report */
 	MFP_CFG(GPIO92, AF0), /* Key ready */
 	MFP_CFG(GPIO93, AF0), /* Low-voltage alarm */
-#endif
 
 
 #if defined(CONFIG_WLAN_8688_SDIO) || defined(CONFIG_WLAN_8688_SDIO_MODULE)
