@@ -148,45 +148,14 @@ static unsigned long silvermoon_pin_config[] __initdata = {
 	MFP_CFG_DRV_PULL(GPIO81, AF1, FAST, LOW),
 	MFP_CFG_DRV_PULL(GPIO82, AF1, FAST, LOW),
 	MFP_CFG_DRV_PULL(GPIO83, AF1, FAST, LOW),
-	/*
-	CSM_GPIO56_LCD_VS,
-	CSM_GPIO57_LCD_HS,
-	CSM_GPIO58_LCD_CLK,
-	CSM_GPIO59_LCD_DEN,
-	CSM_GPIO60_LCD_R0,
-	CSM_GPIO61_LCD_R1,
-	CSM_GPIO62_LCD_R2,
-	CSM_GPIO63_LCD_R3,
-	CSM_GPIO64_LCD_R4,
-	CSM_GPIO65_LCD_R5,
-	CSM_GPIO66_LCD_G0,
-	CSM_GPIO67_LCD_G1,
-	CSM_GPIO68_LCD_G2,
-	CSM_GPIO69_LCD_G3,
-	CSM_GPIO70_LCD_G4,
-	CSM_GPIO71_LCD_G5,
-	CSM_GPIO72_LCD_B0,
-	CSM_GPIO73_LCD_B1,
-	CSM_GPIO74_LCD_B2,
-	CSM_GPIO75_LCD_B3,
-	CSM_GPIO76_LCD_B4,
-	CSM_GPIO77_LCD_B5,
-	*/
 	
 
 	CSM_GPIO85_XotgDRV_VBUS,
 
 
-	// henry@chumby.com -these two were left out before
 	/* i2c bus */
 	GPIO105_CI2C_SDA,
 	GPIO106_CI2C_SCL,
-
-	/* UART1 */
-	/*********
-	GPIO107_UART1_RXD,
-	GPIO108_UART1_TXD,
-	**********/
 
 	//Added to ensure UART1 input works
 	MFP_CFG(GPIO109, AF0),
@@ -198,37 +167,21 @@ static unsigned long silvermoon_pin_config[] __initdata = {
 	GPIO116_I2S_RXD,
 	GPIO117_I2S_TXD,
 
+#if defined(CONFIG_CHUMBY_XILINX) || defined(CONFIG_CHUMBY_XILINX_MODULE)
+	MFP_CFG(GPIO91, AF0), /* HPD report */
+	MFP_CFG(GPIO92, AF0), /* Key ready */
+	MFP_CFG(GPIO93, AF0), /* Low-voltage alarm */
+#endif
+
+
 #if defined(CONFIG_WLAN_8688_SDIO) || defined(CONFIG_WLAN_8688_SDIO_MODULE)
-
 	/* sdh MMC2, wlan*/
-
 	MFP_CFG(GPIO90, AF3), // configure to be SSP3_CCLK, drive 25 MHz clock to FPGA
 	MFP_CFG(GPIO91, AF0),
 	MFP_CFG(GPIO92, AF0),
 	MFP_CFG(GPIO93, AF0),
 	MFP_CFG(GPIO94, AF0),
 	MFP_CFG(GPIO95, AF0),
-#if 0 // legacy
-	// henry@chumby.com - the Silvermoon board with eSD boot uses MMC2
-#if defined(CONFIG_CHUMBY_SILVERMOON_MMC2_WIFI)
- 	GPIO90_MMC2_DAT3,
-	GPIO91_MMC2_DAT2,
-	GPIO92_MMC2_DAT1,
-	GPIO93_MMC2_DAT0,
-	GPIO94_MMC2_CMD,
-	GPIO95_MMC2_CLK,
-#else
-	// atb -this is for older NAND-based silvermoon's wifi connection.
-	CSM_DFI11_MMC3_DAT3,
-	CSM_DFI10_MMC3_DAT2,
-	CSM_DFI09_MMC3_DAT1,
-	CSM_DFI08_MMC3_DAT0,
-	CSM_DFI15_MMC3_CMD,
-	CSM_DFI14_MMC3_CLK,
-#endif
-#endif
-
-
 #endif
 
 	// Turn on power to LCD
@@ -245,13 +198,6 @@ static unsigned long silvermoon_pin_config[] __initdata = {
 
 	// Recovery button
 	MFP_CFG(GPIO89, AF0),
-
-	// Headphone presence detect
-	// CSM_GPIO97_HP_IN,
-
-	// CP UART
-	//	CSM_GPIO98_HOST_TO_CP, // there is no CP uart
-	//	CSM_GPIO99_CP_TO_HOST,
 
 	// Media insert detect
 	CSM_GPIO100_SDCDN, // input, USB overcurrent
