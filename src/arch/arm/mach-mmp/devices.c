@@ -187,14 +187,8 @@ void u2o_write(unsigned base, unsigned offset, unsigned value)
  * USB 2.0 OTG controller
  */
 int pxa168_usb_phy_init(unsigned base)
-{	
-	static int init_done;
+{
 	int count;
-
-	if (init_done) {
-		printk(KERN_DEBUG "re-init phy\n\n");
-		/* return; */
-	}
 
 	/* enable the pull up */
 	if (cpu_is_pxa910_z0()) {
@@ -277,7 +271,6 @@ int pxa168_usb_phy_init(unsigned base)
 		u2o_write(base, UTMI_OTG_ADDON, 1);  /* Turn on UTMI PHY OTG extension */
 	}
 
-	init_done = 1;
 	return 0;
 }
 
