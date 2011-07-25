@@ -85,8 +85,8 @@ ir_key_table_t nikon_key_table[] = {
 	{0xb847f685, KEY_2},
 
 	/* New remote */
-	{0xb946fe85, KEY_CONFIG},
-	{0xba45fe85, KEY_VENDOR},
+	{0xb946fe85, KEY_PAGEUP},//KEY_CONFIG},
+	{0xba45fe85, KEY_PAGEDOWN},//KEY_VENDOR},
 	{0xbc43fe85, KEY_UP},
 	{0xbd42fe85, KEY_LEFT},
 	{0xbf40fe85, KEY_ENTER},
