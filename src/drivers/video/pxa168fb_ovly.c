@@ -1938,14 +1938,20 @@ static void fpga_isr_bottom_half(unsigned long data) {
 	char *env = NULL;
 
 	if (d->irq == gpio_to_irq(93))
-		env = "TYPE=alarm";
+		if (__gpio_get_value(93))
+			env = "TYPE=alarm-clear";
+		else
+			env = "TYPE=alarm-set";
+
 	else if (d->irq == gpio_to_irq(92))
 		env = "TYPE=trigger";
+
 	else if (d->irq == gpio_to_irq(91))
 		if (__gpio_get_value(91))
 			env = "TYPE=attach";
 		else
 			env = "TYPE=detach";
+
 	else
 		dev_err(fbi->fb_info->dev, "Unrecognized IRQ: %d", d->irq);
 
@@ -1956,11 +1962,19 @@ static void fpga_isr_bottom_half(unsigned long data) {
 
 DECLARE_TASKLET(fpga_tasklet, fpga_isr_bottom_half, (unsigned long)&tasklet_data);
 
+#define MFPR_VIRT_BASE	(APB_VIRT_BASE + 0x1e000)
 static irqreturn_t fpga_isr_top_half(int irqno, void *dev_id) {
 	struct pxa168fb_info *fbi = (struct pxa168fb_info *)dev_id;
 	tasklet_data.fbi = fbi;
 	tasklet_data.irq = irqno;
 	tasklet_schedule(&fpga_tasklet);
+	if (irqno == gpio_to_irq(93)) {
+		if (__gpio_get_value(93))
+			__raw_writel(0xc86, MFPR_VIRT_BASE + 0x6c);
+		else
+			__raw_writel(0xc80, MFPR_VIRT_BASE + 0x6c);
+	}
+
 	return IRQ_HANDLED;
 }
 
