@@ -243,6 +243,8 @@ ssize_t fpga_write(struct file *filp, const char __user *buf, size_t count,
 	retval = count; // this means we got it all
 
   out:
+	if (data)
+		kfree(data);
 	up(&dev->sem);
 	return retval;
 }
