@@ -186,6 +186,11 @@ static unsigned long silvermoon_pin_config[] __initdata = {
 	// Turn on power to LCD
 	CSM_GPIO84_LCD_PWM,
 
+#if defined(CONFIG_LEDS_NETV) || defined(CONFIG_LEDS_NETV_MODULE)
+	/* Set GPIO96 as PWM2 */
+	MFP_CFG(GPIO96, AF1),
+#endif
+
 	// Touchscreen
 	CSM_GPIO118_TS_SCLK,
 	//	CSM_GPIO119_TS_CS_LV, // fpga_cclk
@@ -262,6 +267,22 @@ typedef enum{
 	SW_CAM_OFF = 0x03,
 	SW_TW9907  = 0x04,
 } SW_TYPE_T;
+
+
+#if defined(CONFIG_LEDS_NETV) || defined(CONFIG_LEDS_NETV_MODULE)
+static struct resource pxa168_resource_pwm2[] = {
+        [0] = {
+                .start  = 0xD401A800,
+                .end    = 0xD401A80B,
+                .flags  = IORESOURCE_MEM,
+        },
+};
+static struct platform_device silvermoon_netv_leds = {
+	.name		= "leds-netv",
+	.resource	= pxa168_resource_pwm2,
+	.num_resources	= ARRAY_SIZE(pxa168_resource_pwm2),
+};
+#endif
 
 
 #if defined(CONFIG_PXA168_CF)
@@ -769,6 +790,10 @@ static void __init silvermoon_init(void)
 
 #if defined(CONFIG_CIR) || defined(CONFIG_CIR_MODULE)
         pxa168_cir_init(); /*init the gpio */
+#endif
+
+#if defined(CONFIG_LEDS_NETV) || defined(CONFIG_LEDS_NETV_MODULE)
+	platform_device_register(&silvermoon_netv_leds);
 #endif
 
 	platform_device_register(&silvermoon_bl_device);

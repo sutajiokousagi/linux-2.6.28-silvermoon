@@ -206,7 +206,7 @@ static struct clk_lookup pxa168_clkregs[] = {
 	INIT_CLKREG(&clk_keypad, "pxa27x-keypad", NULL),
 	INIT_CLKREG(&clk_pwm0, "pxa168-pwm.0", "PWMCLK"),
 	INIT_CLKREG(&clk_pwm1, "pxa168-pwm.1", "PWMCLK"),
-	INIT_CLKREG(&clk_pwm2, "pxa168-pwm.2", "PWMCLK"),
+	INIT_CLKREG(&clk_pwm2, "pxa168-pwm.2", "LEDS-CLK"),
 	INIT_CLKREG(&clk_pwm3, "pxa168-pwm.3", "PWMCLK"),
 
 	INIT_CLKREG(&clk_lcd, NULL, "LCDCLK"),

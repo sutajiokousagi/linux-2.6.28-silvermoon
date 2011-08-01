@@ -165,6 +165,14 @@ config LEDS_DA903X
 	  This option enables support for on-chip LED drivers found
 	  on Dialog Semiconductor DA9030/DA9034 PMICs.
 
+config LEDS_NETV
+	tristate "LED Support for chumby NeTV"
+	depends on LEDS_CLASS && MACH_CHUMBY_SILVERMOON
+	help
+	  Enable support for the green LED found on the NeTV Board.
+	  The blue LED is controlled by the FPGA, and is not part
+	  of this driver.
+
 comment "LED Triggers"
 
 config LEDS_TRIGGERS
