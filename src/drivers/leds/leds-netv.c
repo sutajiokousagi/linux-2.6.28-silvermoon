@@ -35,7 +35,7 @@ static void netv_led_set(struct led_classdev *led_cdev,
 	struct netv_led_data *led_dat =
 		container_of(led_cdev, struct netv_led_data, cdev);
 
-	writel(4*(255-value), 4 + led_dat->membase);
+	writel(4*(256-value), 4 + led_dat->membase);
 }
 
 static int netv_led_probe(struct platform_device *pdev)
