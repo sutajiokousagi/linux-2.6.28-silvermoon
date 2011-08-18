@@ -732,7 +732,7 @@ static void __init silvermoon_init(void)
 	pxa168_set_vdd_iox(VDD_IO0, VDD_IO_3P3V);
 	pxa168_set_vdd_iox(VDD_IO1, VDD_IO_3P3V);
 	pxa168_set_vdd_iox(VDD_IO2, VDD_IO_3P3V);
-	pxa168_set_vdd_iox(VDD_IO3, VDD_IO_1P8V);
+	pxa168_set_vdd_iox(VDD_IO3, VDD_IO_3P3V);
 	pxa168_set_vdd_iox(VDD_IO4, VDD_IO_3P3V);
 	pxa168_mfp_set_fastio_drive(MFP_DS02X);
 
