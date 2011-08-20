@@ -165,7 +165,9 @@ static unsigned long silvermoon_pin_config[] __initdata = {
 	GPIO114_I2S_FRM,
 	GPIO115_I2S_BCLK,
 	GPIO116_I2S_RXD,
-	GPIO117_I2S_TXD,
+
+	//	GPIO117_I2S_TXD,
+	MFP_CFG(GPIO117, AF0),
 
 	/* Configure FPGA pins */
 	MFP_CFG(GPIO91, AF0), /* HPD report */
