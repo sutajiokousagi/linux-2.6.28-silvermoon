@@ -1952,6 +1952,11 @@ static void fpga_isr_bottom_half(unsigned long data) {
 		else
 			env = "TYPE=detach";
 
+	else if( d->irq == gpio_to_irq(117))
+		if (__gpio_get_value(117))
+			env = "TYPE=src_attach";
+		else
+			env = "TYPE=src_detach";
 	else
 		dev_err(fbi->fb_info->dev, "Unrecognized IRQ: %d", d->irq);
 
@@ -2185,13 +2190,13 @@ static int __init pxa168fb_probe(struct platform_device *pdev)
 	}
 
 
-	/* Allocate the HDP interrupt GPIO */
+	/* Allocate the HPD interrupt GPIO */
 	gpio_request(91, "HPD report");
 	gpio_direction_input(91);
 
 	/* Allocate the HPD IRQ */
 	ret = request_irq(IRQ_GPIO(91), fpga_isr_top_half,
-			  IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
+			  IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING | IRQF_SAMPLE_RANDOM,
 			  "HPD trigger", fbi);
 	if (ret)
 		dev_err(&pdev->dev, "Can't allocate IRQ 91 for HPD trigger");
@@ -2201,9 +2206,9 @@ static int __init pxa168fb_probe(struct platform_device *pdev)
 	gpio_request(92, "HDCP Aksv ready");
 	gpio_direction_input(92);
 
-	/* Allocate the HPD IRQ */
+	/* Allocate the hdcp interrupt IRQ */
 	ret = request_irq(IRQ_GPIO(92), fpga_isr_top_half,
-			  IRQF_TRIGGER_RISING,
+			  IRQF_TRIGGER_RISING | IRQF_SAMPLE_RANDOM,
 			 "HDCP Aksv ready", fbi);
 	if(ret)
 		dev_err(&pdev->dev, "Can't allocate IRQ 92 for HDCP trigger");
@@ -2213,12 +2218,23 @@ static int __init pxa168fb_probe(struct platform_device *pdev)
 	gpio_request(93, "Low voltage emergency");
 	gpio_direction_input(93);
 
-	/* Allocate the HPD IRQ */
+	/* Allocate the low voltage IRQ */
 	ret = request_irq(IRQ_GPIO(93), fpga_isr_top_half,
-			  IRQF_TRIGGER_RISING,
+			  IRQF_TRIGGER_RISING | IRQF_SAMPLE_RANDOM,
 			 "Low voltage emergency", fbi);
 	if (ret)
 		dev_err(&pdev->dev, "Can't allocate IRQ 93 for low voltage interrupt");
+
+	/* Allocate the source status change interrupt */
+	gpio_request(117, "Source PLL lock status change");
+	gpio_direction_input(117);
+
+	/* Allocate the source status change IRQ */
+	ret = request_irq(IRQ_GPIO(117), fpga_isr_top_half,
+			  IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING | IRQF_SAMPLE_RANDOM,
+			 "Source PLL lock status change", fbi);
+	if (ret)
+		dev_err(&pdev->dev, "Can't allocate IRQ 117 for low voltage interrupt");
 
 	/*
 	 * Enable Video interrupt
