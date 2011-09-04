@@ -475,10 +475,10 @@ void fpga_init_hw(void) {
   gpio_request(91, "HPD report");
   gpio_direction_input(91);
 
-  printk("SSP2 clock enable (52 MHz)\n");
-  __raw_writel(0x33,(APB_VIRT_BASE + 0x15820));
-  __raw_writel(0x37,(APB_VIRT_BASE + 0x15820)); // reset the unit
-  __raw_writel(0x33,(APB_VIRT_BASE + 0x15820));
+  printk("SSP2 clock enable (26 MHz)\n");
+  __raw_writel(0x23,(APB_VIRT_BASE + 0x15820));
+  __raw_writel(0x27,(APB_VIRT_BASE + 0x15820)); // reset the unit
+  __raw_writel(0x23,(APB_VIRT_BASE + 0x15820));
   
   printk("SSP3 clock enable (26 MHz)\n" );
   __raw_writel(0x23,(APB_VIRT_BASE + 0x1584c));
