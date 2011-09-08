@@ -364,15 +364,6 @@ static void sdhci_transfer_pio(struct sdhci_host *host)
 		mask = ~0;
 
 	while (sdhci_readl(host, SDHCI_PRESENT_STATE) & mask) {
-#ifdef CONFIG_CHUMBY_SILVERMOON_SDBOOT
-	/* Delay as long as the low-voltage ALARM bit is set */
-	if (!__gpio_get_value(93)) {
-		printk(KERN_ERR "pio sd delay because voltage is low\n");
-		while(!__gpio_get_value(93));
-		printk(KERN_ERR "voltage returned to normal\n");
-	}
-#endif
-
 		if (host->quirks & SDHCI_QUIRK_PIO_NEEDS_DELAY)
 			udelay(100);
 
@@ -674,15 +665,6 @@ static void sdhci_prepare_data(struct sdhci_host *host, struct mmc_data *data)
 
 	if (data == NULL)
 		return;
-
-#ifdef CONFIG_CHUMBY_SILVERMOON_SDBOOT
-	/* Delay as long as the low-voltage ALARM bit is set */
-	if (!__gpio_get_value(93)) {
-		printk(KERN_ERR "trying to write to sd card preparing data while voltage falling\n");
-		while(!__gpio_get_value(93));
-		printk(KERN_ERR "voltage returned to normal\n");
-	}
-#endif
 
 	/* Sanity checks */
 	BUG_ON(data->blksz * data->blocks > 524288);

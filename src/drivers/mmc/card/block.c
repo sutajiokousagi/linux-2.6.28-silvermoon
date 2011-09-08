@@ -39,10 +39,6 @@
 #include <asm/system.h>
 #include <asm/uaccess.h>
 
-#ifdef CONFIG_CHUMBY_SILVERMOON_SDBOOT
-#include <mach/gpio.h>
-#endif
-
 #include "queue.h"
 
 MODULE_ALIAS("mmc:block");
@@ -329,15 +325,6 @@ static int mmc_blk_issue_rq(struct mmc_queue *mq, struct request *req)
 		}
 
 		mmc_queue_bounce_pre(mq);
-
-#ifdef CONFIG_CHUMBY_SILVERMOON_SDBOOT
-	/* Delay as long as the low-voltage ALARM bit is set */
-	if (!__gpio_get_value(93)) {
-		printk(KERN_ERR "low voltage just before the time we send data to the card\n");
-		while(!__gpio_get_value(93));
-		printk(KERN_ERR "voltage returned to normal\n");
-	}
-#endif
 
 		mmc_wait_for_req(card->host, &brq.mrq);
 
