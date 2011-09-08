@@ -26,10 +26,6 @@
 
 #include <mach/cputype.h>
 
-#ifdef CONFIG_CHUMBY_SILVERMOON_SDBOOT
-#include <mach/gpio.h>
-#endif
-
 #include "sdhci.h"
 
 #undef WARNINGS
@@ -1141,15 +1137,6 @@ static void sdhci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	struct sdhci_host *host;
 	bool present;
 	unsigned long flags;
-
-#ifdef CONFIG_CHUMBY_SILVERMOON_SDBOOT
-	/* Delay as long as the low-voltage ALARM bit is set */
-	if (!__gpio_get_value(93)) {
-		printk(KERN_ERR "attempting to access SD card while voltage is low, so pausing SD activity\n");
-		while(!__gpio_get_value(93));
-		printk(KERN_ERR "voltage returned to normal\n");
-	}
-#endif
 
 	host = mmc_priv(mmc);
 
