@@ -231,6 +231,7 @@ ENTRY(mohawk_coherent_user_range)
 	mcr	p15, 0, r0, c7, c10, 4		@ drain WB
 #if !defined(CPU_PXA168_B0)
 #if defined(CONFIG_CPU_L2_CACHE)
+#if 0
 	mov		r0, r2
 	add		r0, #BAD_CACHE_LINE_OFFSET
 1:	cmp		r0, r1
@@ -239,6 +240,7 @@ ENTRY(mohawk_coherent_user_range)
 	add		r0, #PAGE_SZ
 	b		1b
 2:
+#endif
 #endif
 	mcr	p15, 0, r0, c7, c10, 4		@ drain WB
 #endif
