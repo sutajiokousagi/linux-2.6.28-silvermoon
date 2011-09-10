@@ -159,6 +159,12 @@ config SA1100_WATCHDOG
 	  To compile this driver as a module, choose M here: the
 	  module will be called sa1100_wdt.
 
+config SILVERMOON_WATCHDOG
+	tristate "Silvermoon watchdog"
+	depends on MACH_CHUMBY_SILVERMOON
+	help
+	  Watchdog timer embedded into Aspen chips used in Silvermoon.
+
 config MPCORE_WATCHDOG
 	tristate "MPcore watchdog"
 	depends on ARM_MPCORE_PLATFORM && LOCAL_TIMERS
