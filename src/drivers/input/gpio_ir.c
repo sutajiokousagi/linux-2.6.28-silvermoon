@@ -74,8 +74,8 @@ static unsigned int cb_start=0, cb_end=0;
  */
 ir_key_table_t nikon_key_table[] = {
 	/* Old, Nikon remote */
-	{0xb946f685, KEY_CONFIG},
-	{0xba45f685, KEY_VENDOR},
+	{0xb946f685, KEY_PAGEUP},
+	{0xba45f685, KEY_PAGEDOWN},
 	{0xbc43f685, KEY_UP},
 	{0xbd42f685, KEY_LEFT},
 	{0xbf40f685, KEY_ENTER},
