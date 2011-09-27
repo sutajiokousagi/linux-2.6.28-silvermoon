@@ -18,6 +18,7 @@
 #include <mach/pxa168.h>
 #include <mach/addr-map.h>
 #include <mach/regs-apbc.h>
+#include <mach/regs-ciu.h>
 #include <mach/regs-apmu.h>
 #include <mach/cputype.h>
 #include <mach/irqs.h>
@@ -61,6 +62,12 @@ void __init pxa168_init_irq(void)
 {
 	icu_init_irq();
 	pxa168_init_gpio();
+	/*
+	 * Disable FIFO merging, which can corrupt data sitting in the cache
+	 * pending writes.  The errata says this has minimal performance
+	 * impact, and that all users should disable this feature.
+	 */
+	__raw_writel(__raw_readl(CIU_CPU_CONF) | 0x20, CIU_CPU_CONF);
 }
 
 struct gc_rate_table {
