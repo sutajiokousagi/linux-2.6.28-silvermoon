@@ -67,7 +67,7 @@ void __init pxa168_init_irq(void)
 	 * pending writes.  The errata says this has minimal performance
 	 * impact, and that all users should disable this feature.
 	 */
-	__raw_writel(__raw_readl(CIU_CPU_CONF) | 0x20, CIU_CPU_CONF);
+	__raw_writel(__raw_readl(CIU_CPU_CONF) | 0x20 | 0x02, CIU_CPU_CONF);
 }
 
 struct gc_rate_table {
