@@ -74,6 +74,14 @@ ENTRY(cpu_mohawk_proc_init)
  * cpu_mohawk_proc_fin()
  */
 ENTRY(cpu_mohawk_proc_fin)
+	/*
+	 * This function causes random segfaults, since we've moved
+	 * to writethrough L2 cache.  Since everything should be flushed
+	 * already by the time we're powering off, this shouldn't be an
+	 * issue.  This will be a problem if we enable sleep.
+	 */
+	mov	pc, lr
+/*
 	stmfd	sp!, {lr}
 	mov	ip, #PSR_F_BIT | PSR_I_BIT | SVC_MODE
 	msr	cpsr_c, ip
@@ -83,6 +91,7 @@ ENTRY(cpu_mohawk_proc_fin)
 	bic	r0, r0, #0x000e			@ ............wca.
 	mcr	p15, 0, r0, c1, c0, 0		@ disable caches
 	ldmfd	sp!, {pc}
+*/
 
 /*
  * cpu_mohawk_reset(loc)
