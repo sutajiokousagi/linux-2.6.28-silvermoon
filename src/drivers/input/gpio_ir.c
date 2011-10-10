@@ -329,7 +329,7 @@ static int __devinit cir_probe(struct platform_device *pdev)
 	cir->input_dev->name = "aspenite_cir";
 	cir->input_dev->phys = "aspenite_cir/input2";
 	cir->input_dev->dev.parent = &pdev->dev;
-	cir->input_dev->evbit[0] = BIT(EV_KEY);
+	cir->input_dev->evbit[0] = BIT(EV_KEY) | BIT(EV_REP);
 	cir->pdev = pdev;
 
 	/* Announce that the CIR will generate  key map */
