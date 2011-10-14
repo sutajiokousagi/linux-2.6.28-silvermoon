@@ -1675,6 +1675,7 @@ static int pxa168fb_set_par(struct fb_info *fi)
 
 #if defined(CONFIG_MACH_CHUMBY_SILVERMOON)
 	fbi->interlaced = (var->vmode == FB_VMODE_INTERLACED);
+	fbi->field = 0;
 	dev_dbg(fi->dev, "Interlaced mode? %d\n", fbi->interlaced);
 #endif
 
