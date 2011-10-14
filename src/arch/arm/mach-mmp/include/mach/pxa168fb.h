@@ -315,7 +315,10 @@ struct pxa168fb_info {
 	unsigned		active:1;
         unsigned                enabled:1;
         unsigned                edid_en:1;
-
+#if defined(CONFIG_MACH_CHUMBY_SILVERMOON)
+	unsigned		interlaced;
+	unsigned		field;
+#endif
         /*
          * 0: DMA mem is from DMA region.
          * 1: DMA mem is from normal region.

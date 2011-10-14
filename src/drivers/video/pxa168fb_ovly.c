@@ -1502,6 +1502,11 @@ static void set_dma_control0(struct pxa168fb_info *fbi)
 	 */
 	x |= ((fbi->pix_fmt & ~0x1000) >> 1) << 20;
 
+#if defined(CONFIG_MACH_CHUMBY_SILVERMOON)
+	if (fbi->interlaced)
+		x |= 0x80;
+#endif
+
 	/*
 	 * color format in memory:
 	 * PXA168/PXA910:
@@ -1593,6 +1598,10 @@ static void set_graphics_start(struct fb_info *fi, int xoffset, int yoffset)
 				writel(fbi->new_addr[1], fbi->reg_base + LCD_SPU_DMA_START_ADDR_U0);
 				writel(fbi->new_addr[2], fbi->reg_base + LCD_SPU_DMA_START_ADDR_V0);
 			}
+#if defined(CONFIG_MACH_CHUMBY_SILVERMOON)
+			if (fbi->interlaced)
+				writel(fbi->new_addr[0] + var->xres*var->bits_per_pixel/8, fbi->reg_base + LCD_SPU_DMA_START_ADDR_Y1);
+#endif
 		} else {
 			addr = dma_base_address;
 			writel(addr, fbi->reg_base + LCD_SPU_DMA_START_ADDR_Y0);
@@ -1604,6 +1613,10 @@ static void set_graphics_start(struct fb_info *fi, int xoffset, int yoffset)
 			else if ((fbi->pix_fmt>>1) == 7)
 				addr += var->xres * var->yres/4;
 			writel(addr, fbi->reg_base + LCD_SPU_DMA_START_ADDR_V0);
+#if defined(CONFIG_MACH_CHUMBY_SILVERMOON)
+			if (fbi->interlaced)
+				writel(addr + var->xres*var->bits_per_pixel/8, fbi->reg_base + LCD_SPU_DMA_START_ADDR_Y1);
+#endif
 		}
 	} else {
 		/* Enable the interrupt */
@@ -1659,6 +1672,11 @@ static int pxa168fb_set_par(struct fb_info *fi)
 	else
 		fi->fix.visual = FB_VISUAL_TRUECOLOR;
 	fi->fix.line_length = var->xres_virtual * var->bits_per_pixel / 8;
+
+#if defined(CONFIG_MACH_CHUMBY_SILVERMOON)
+	fbi->interlaced = (var->vmode == FB_VMODE_INTERLACED);
+	dev_dbg(fi->dev, "Interlaced mode? %d\n", fbi->interlaced);
+#endif
 
 	/*
 	 * Configure global panel parameters.
@@ -1720,9 +1738,9 @@ static int pxa168fb_set_par(struct fb_info *fi)
 
 #if defined(CONFIG_MACH_CHUMBY_SILVERMOON)
 	/*
-		* Re-point the graphics display at the RGB buffer if it's RGB data
-		* we're displaying now.
-		*/
+	* Re-point the graphics display at the RGB buffer if it's RGB data
+	* we're displaying now.
+	*/
 	if(fbi->pix_fmt >= 0 && fbi->pix_fmt < 10) {
 		dma_base_address = (unsigned int)fbi->fb_start_dma;
 		fbi->new_addr[0] = (unsigned int)fbi->fb_start_dma;
@@ -1766,17 +1784,24 @@ static int pxa168fb_set_par(struct fb_info *fi)
         fi->screen_size = fi->fix.smem_len;
 
 #if defined(CONFIG_MACH_CHUMBY_SILVERMOON)
-	/*
-	 * Configure dumb panel ctrl regs & timings.
-	 */
-	set_dumb_screen_dimensions(fi);
+	{
+		int old_yres;
+		old_yres = var->yres;
+		if (fbi->interlaced)
+			var->yres /= 2;
+		/*
+		 * Configure dumb panel ctrl regs & timings.
+		 */
+		set_dumb_screen_dimensions(fi);
 
-	writel((var->yres << 16) | var->xres,
-		fbi->reg_base + LCD_SPU_V_H_ACTIVE);
-	writel((var->left_margin << 16) | var->right_margin,
-			fbi->reg_base + LCD_SPU_H_PORCH);
-	writel((var->upper_margin << 16) | var->lower_margin,
-			fbi->reg_base + LCD_SPU_V_PORCH);
+		writel((var->yres << 16) | var->xres,
+			fbi->reg_base + LCD_SPU_V_H_ACTIVE);
+		writel((var->left_margin << 16) | var->right_margin,
+				fbi->reg_base + LCD_SPU_H_PORCH);
+		writel((var->upper_margin << 16) | var->lower_margin,
+				fbi->reg_base + LCD_SPU_V_PORCH);
+		var->yres = old_yres;
+	}
 #endif
 
 
@@ -1867,6 +1892,21 @@ static irqreturn_t pxa168fb_handle_irq(int irq, void *dev_id)
 				writel(fbi->new_addr[1], fbi->reg_base + LCD_SPU_DMA_START_ADDR_U0);
 				writel(fbi->new_addr[2], fbi->reg_base + LCD_SPU_DMA_START_ADDR_V0);
 			}
+#if defined(CONFIG_MACH_CHUMBY_SILVERMOON)
+			if (fbi->interlaced) {
+				int t = readl(fbi->reg_base + LCD_SPUT_V_H_TOTAL);
+				if (fbi->field) {
+					fbi->field = 0;
+					t = (t&0xffff) | ((((t>>16)-1)<<16)&0xffff0000);
+				}
+				else {
+					fbi->field = 1;
+					t = (t&0xffff) | ((((t>>16)+1)<<16)&0xffff0000);
+				}
+				writel(t, fbi->reg_base + LCD_SPUT_V_H_TOTAL);
+				writel(fbi->new_addr[0] + var->xres*var->bits_per_pixel/8, fbi->reg_base + LCD_SPU_DMA_START_ADDR_Y1);
+			}
+#endif
 		} else {
 			addr = dma_base_address;
 			writel(addr, fbi->reg_base + LCD_SPU_DMA_START_ADDR_Y0);
@@ -1878,10 +1918,27 @@ static irqreturn_t pxa168fb_handle_irq(int irq, void *dev_id)
 			else if ((fbi->pix_fmt>>1) == 7)
 				addr += var->xres * var->yres/4;
 			writel(addr, fbi->reg_base + LCD_SPU_DMA_START_ADDR_V0);
+#if defined(CONFIG_MACH_CHUMBY_SILVERMOON)
+			if (fbi->interlaced) {
+				int t = readl(fbi->reg_base + LCD_SPUT_V_H_TOTAL);
+				if (fbi->field) {
+					fbi->field = 0;
+					t = (t&0xffff) | ((((t>>16)-1)<<16)&0xffff0000);
+				}
+				else {
+					fbi->field = 1;
+					t = (t&0xffff) | ((((t>>16)+1)<<16)&0xffff0000);
+				}
+				writel(t, fbi->reg_base + LCD_SPUT_V_H_TOTAL);
+				writel(addr + var->xres*var->bits_per_pixel/8, fbi->reg_base + LCD_SPU_DMA_START_ADDR_Y1);
+			}
+#endif
 		}
+#if !defined(CONFIG_MACH_CHUMBY_SILVERMOON)
 		/* write the graphic layer start address */
 		writel(gra_dma_base_address,
 		       fbi->reg_base + LCD_CFG_GRA_START_ADDR0);
+#endif
 
 		writel(isr &= ~VSYNC_IRQ_ENA_MASK,
 		       fbi->reg_base + SPU_IRQ_ISR);
