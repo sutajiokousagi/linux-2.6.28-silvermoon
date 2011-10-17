@@ -1677,6 +1677,11 @@ static int pxa168fb_set_par(struct fb_info *fi)
 	fbi->interlaced = (var->vmode == FB_VMODE_INTERLACED);
 	fbi->field = 0;
 	dev_dbg(fi->dev, "Interlaced mode? %d\n", fbi->interlaced);
+	/* For interlaced, force an even number of VBLs.  Odd-numbered fields
+	 * will have one more VBL automatically added to them.
+	 */
+	if (fbi->interlaced)
+		var->lower_margin &= ~1L;
 #endif
 
 	/*
@@ -1883,6 +1888,9 @@ static irqreturn_t pxa168fb_handle_irq(int irq, void *dev_id)
 		atomic_set(&fbi->w_intr, 1);
 		wake_up(&fbi->w_intr_wq);
 		writel(isr & (~DMA_FRAME_IRQ0_ENA_MASK), fbi->reg_base + SPU_IRQ_ISR);
+#if defined(CONFIG_MACH_CHUMBY_SILVERMOON)
+		fbi->field = 1;
+#endif
 		ret = IRQ_HANDLED;
 	}
 
@@ -1895,16 +1903,13 @@ static irqreturn_t pxa168fb_handle_irq(int irq, void *dev_id)
 			}
 #if defined(CONFIG_MACH_CHUMBY_SILVERMOON)
 			if (fbi->interlaced) {
-				int t = readl(fbi->reg_base + LCD_SPUT_V_H_TOTAL);
-				if (fbi->field) {
-					fbi->field = 0;
-					t = (t&0xffff) | ((((t>>16)-1)<<16)&0xffff0000);
-				}
-				else {
-					fbi->field = 1;
-					t = (t&0xffff) | ((((t>>16)+1)<<16)&0xffff0000);
-				}
-				writel(t, fbi->reg_base + LCD_SPUT_V_H_TOTAL);
+				var->lower_margin += fbi->field;
+				var->yres += fbi->field;
+				var->yres >>= 1;
+				set_dumb_screen_dimensions(fi);
+				var->yres <<= 1;
+				var->lower_margin -= fbi->field;
+				fbi->field = 1 - fbi->field;
 				writel(fbi->new_addr[0] + var->xres*var->bits_per_pixel/8, fbi->reg_base + LCD_SPU_DMA_START_ADDR_Y1);
 			}
 #endif
@@ -1921,16 +1926,12 @@ static irqreturn_t pxa168fb_handle_irq(int irq, void *dev_id)
 			writel(addr, fbi->reg_base + LCD_SPU_DMA_START_ADDR_V0);
 #if defined(CONFIG_MACH_CHUMBY_SILVERMOON)
 			if (fbi->interlaced) {
-				int t = readl(fbi->reg_base + LCD_SPUT_V_H_TOTAL);
-				if (fbi->field) {
-					fbi->field = 0;
-					t = (t&0xffff) | ((((t>>16)-1)<<16)&0xffff0000);
-				}
-				else {
-					fbi->field = 1;
-					t = (t&0xffff) | ((((t>>16)+1)<<16)&0xffff0000);
-				}
-				writel(t, fbi->reg_base + LCD_SPUT_V_H_TOTAL);
+				var->lower_margin += fbi->field;
+				var->yres >>= 1;
+				set_dumb_screen_dimensions(fi);
+				var->yres <<= 1;
+				var->lower_margin -= fbi->field;
+				fbi->field = 1 - fbi->field;
 				writel(addr + var->xres*var->bits_per_pixel/8, fbi->reg_base + LCD_SPU_DMA_START_ADDR_Y1);
 			}
 #endif
