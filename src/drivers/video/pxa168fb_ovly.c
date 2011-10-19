@@ -1765,10 +1765,6 @@ static int pxa168fb_set_par(struct fb_info *fi)
 	/* Fix the DMA queue depth, to prevent red lines on videos */
 	/* Note: Thsi register is called LCD_MISC_CNTL in the docs */
 	writel(0x4, fbi->reg_base + LCD_FIFO_DEPTH);
-
-	/* Enable sign-extension for RGB565 -> RGB666 conversion */
-	writel(0x00800000 | readl(fbi->reg_base + LCD_SPU_DMA_CTRL1),
-		fbi->reg_base + LCD_SPU_DMA_CTRL1);
 #endif
         
         writel((yzoom << 16) | xzoom,
@@ -2166,6 +2162,7 @@ static int __init pxa168fb_probe(struct platform_device *pdev)
 	 * that was drawn in the bootloader, while we switch this framebuffer
 	 * to ARGB8888 and redraw the logo.
 	 */
+	//writel(0x20020081, fbi->reg_base + LCD_SPU_DMA_CTRL1);
 	writel(0x90000001, fbi->reg_base + LCD_CFG_SCLK_DIV);
 #else
 	/*
